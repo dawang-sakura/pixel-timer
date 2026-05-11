@@ -81,6 +81,10 @@ class ConfigManager:
         ]
         self.save()
 
+    def set_hotkeys(self, hotkeys):
+        self._data["hotkeys"] = hotkeys
+        self.save()
+
     def get_global(self):
         return self._data.get("global", {})
 

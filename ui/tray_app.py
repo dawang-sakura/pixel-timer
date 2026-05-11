@@ -2,6 +2,8 @@ from PySide6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
 from PySide6.QtCore import Qt
 
+from ui.settings_window import SettingsWindow
+
 
 class TrayApp(QSystemTrayIcon):
     def __init__(self, config_manager, hotkey_manager, timer_engine, parent=None):
@@ -9,6 +11,7 @@ class TrayApp(QSystemTrayIcon):
         self.config = config_manager
         self.hotkeys = hotkey_manager
         self.timer = timer_engine
+        self._settings_win = None
 
         self._build_icon()
         self._build_menu()
@@ -107,12 +110,16 @@ class TrayApp(QSystemTrayIcon):
             self.setToolTip("Pixel Timer")
 
     def _open_settings(self):
-        self.showMessage(
-            "Pixel Timer",
-            "設定視窗尚未實作（Phase 2）",
-            QSystemTrayIcon.MessageIcon.Information,
-            2000,
-        )
+        if self._settings_win is not None and self._settings_win.isVisible():
+            self._settings_win.raise_()
+            self._settings_win.activateWindow()
+            return
+        self._settings_win = SettingsWindow(self.config)
+        self._settings_win.settings_changed.connect(self._on_settings_changed)
+        self._settings_win.show()
+
+    def _on_settings_changed(self):
+        self.hotkeys.register_from_config(self.config.get_hotkeys())
 
     def _exit(self):
         self.hotkeys.unregister_all()
