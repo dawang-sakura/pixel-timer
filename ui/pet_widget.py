@@ -2,7 +2,7 @@ import ctypes
 import ctypes.wintypes
 
 from PySide6.QtWidgets import QWidget, QLabel, QMenu, QApplication
-from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
 
 _HWND_TOPMOST = -1
@@ -10,6 +10,9 @@ _SWP_NOMOVE = 0x0002
 _SWP_NOSIZE = 0x0001
 _SWP_NOACTIVATE = 0x0010
 _SWP_FLAGS = _SWP_NOMOVE | _SWP_NOSIZE | _SWP_NOACTIVATE
+
+_EVENT_SYSTEM_FOREGROUND = 0x0003
+_WINEVENT_OUTOFCONTEXT = 0x0000
 
 _user32 = ctypes.windll.user32
 _user32.SetWindowPos.argtypes = [
@@ -19,13 +22,37 @@ _user32.SetWindowPos.argtypes = [
 ]
 _user32.SetWindowPos.restype = ctypes.wintypes.BOOL
 
+_WINEVENTPROC = ctypes.WINFUNCTYPE(
+    None,
+    ctypes.wintypes.HANDLE,
+    ctypes.wintypes.DWORD,
+    ctypes.wintypes.HWND,
+    ctypes.c_long,
+    ctypes.c_long,
+    ctypes.wintypes.DWORD,
+    ctypes.wintypes.DWORD,
+)
+
+_user32.SetWinEventHook.argtypes = [
+    ctypes.wintypes.DWORD, ctypes.wintypes.DWORD,
+    ctypes.wintypes.HMODULE, _WINEVENTPROC,
+    ctypes.wintypes.DWORD, ctypes.wintypes.DWORD,
+    ctypes.wintypes.DWORD,
+]
+_user32.SetWinEventHook.restype = ctypes.wintypes.HANDLE
+
+_user32.UnhookWinEvent.argtypes = [ctypes.wintypes.HANDLE]
+_user32.UnhookWinEvent.restype = ctypes.wintypes.BOOL
+
 
 class PetWidget(QWidget):
     timer_toggled = Signal(str)       # pet_id
     position_changed = Signal(str, int, int)  # pet_id, x, y
 
-    # Class-level counter for auto-positioning
     _auto_position_index = 0
+    _all_widgets = []
+    _fg_hook = None
+    _fg_hook_proc = None
 
     def __init__(self, pet_config: dict, animator, parent=None):
         super().__init__(parent)
@@ -36,7 +63,6 @@ class PetWidget(QWidget):
         self._drag_started_pos = None
         self._counting = False
 
-        # Window setup
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
@@ -45,30 +71,49 @@ class PetWidget(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFixedSize(48, 48)
 
-        # Force topmost via Win32 (re-asserted every 2 seconds)
-        self._topmost_timer = QTimer(self)
-        self._topmost_timer.timeout.connect(self._ensure_topmost)
-        self._topmost_timer.start(2000)
-
-        # Sprite label
         self._label = QLabel(self)
         self._label.setGeometry(0, 0, 48, 48)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Connect animator frames
         self._animator.frame_changed.connect(self.update_frame)
 
-        # Set initial pixmap if available
         initial = self._animator.current_pixmap()
         if initial and not initial.isNull():
             self._label.setPixmap(initial)
 
-        # Position
         pos = pet_config.get("position", {"x": -1, "y": -1})
         if pos.get("x", -1) == -1 or pos.get("y", -1) == -1:
             self._auto_place()
         else:
             self.move(pos["x"], pos["y"])
+
+        PetWidget._all_widgets.append(self)
+        PetWidget._install_hook()
+
+    # ------------------------------------------------------------------ topmost
+
+    @classmethod
+    def _install_hook(cls):
+        if cls._fg_hook is not None:
+            return
+
+        def _on_foreground(hWinEventHook, event, hwnd, idObject, idChild, idEventThread, dwmsEventTime):
+            for w in list(cls._all_widgets):
+                if w.isVisible():
+                    w._ensure_topmost()
+
+        cls._fg_hook_proc = _WINEVENTPROC(_on_foreground)
+        cls._fg_hook = _user32.SetWinEventHook(
+            _EVENT_SYSTEM_FOREGROUND, _EVENT_SYSTEM_FOREGROUND,
+            None, cls._fg_hook_proc, 0, 0, _WINEVENT_OUTOFCONTEXT,
+        )
+
+    @classmethod
+    def _uninstall_hook(cls):
+        if cls._fg_hook:
+            _user32.UnhookWinEvent(cls._fg_hook)
+            cls._fg_hook = None
+            cls._fg_hook_proc = None
 
     def _ensure_topmost(self):
         if self.isVisible():
@@ -82,7 +127,10 @@ class PetWidget(QWidget):
         self._ensure_topmost()
 
     def closeEvent(self, event):
-        self._topmost_timer.stop()
+        if self in PetWidget._all_widgets:
+            PetWidget._all_widgets.remove(self)
+        if not PetWidget._all_widgets:
+            PetWidget._uninstall_hook()
         super().closeEvent(event)
 
     def _auto_place(self):
@@ -91,7 +139,6 @@ class PetWidget(QWidget):
         idx = PetWidget._auto_position_index
         PetWidget._auto_position_index += 1
 
-        # Stack horizontally from bottom-right, 60px spacing
         spacing = 60
         x = geom.right() - 48 - (idx * spacing)
         y = geom.bottom() - 48

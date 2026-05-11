@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
 from PySide6.QtCore import Qt, QPoint
 
+from core.constants import CHARACTER_DISPLAY_NAMES
 from ui.settings_window import SettingsWindow
 from ui.pet_widget import PetWidget
 from ui.notification_window import NotificationWindow
@@ -174,9 +175,11 @@ class TrayApp(QSystemTrayIcon):
             parts = []
             for tid, remaining in active.items():
                 pet_cfg = self.config.get_pet(tid)
-                label = pet_cfg.get("message", tid) if pet_cfg else tid
+                char = pet_cfg.get("character", "") if pet_cfg else ""
+                char_name = CHARACTER_DISPLAY_NAMES.get(char, char)
+                msg = pet_cfg.get("message", tid) if pet_cfg else tid
                 m, s = divmod(remaining, 60)
-                parts.append(f"{label}: {m:02d}:{s:02d}")
+                parts.append(f"{char_name} {msg}: {m:02d}:{s:02d}")
             text = " | ".join(parts)
             self._status_action.setText(text)
             self.setToolTip("Pixel Timer\n" + "\n".join(parts))

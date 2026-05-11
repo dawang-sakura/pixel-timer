@@ -31,7 +31,10 @@ pixel_timer/
 - Phase 2: 設定 GUI（PySide6 三 Tab 設定視窗 + 熱鍵錄製 + 衝突偵測）✅
 - Phase 3: 桌寵觸發系統 + 像素動畫 ✅
 - Phase 3.5: 強制置頂（Win32 SetWindowPos）+ 角色換血（6 角色）✅
-- Phase 4: PyInstaller 打包
+- Phase 4: Bug 修復 + 角色增強（置頂 event hook + 描邊閃爍 + 小雞 + 中文名 + 史奴比重繪）✅
+- Phase 5: Cron 鬧鐘功能
+- Phase 6: GUI 像素風古早遊戲介面
+- Phase 7: PyInstaller 打包
 
 ## 開發指令
 ```bash
@@ -48,7 +51,8 @@ pixel_timer/
 - 每隻桌寵 = 獨立 QWidget，自行管理拖曳與點擊事件
 - 桌寵強制置頂：Win32 `SetWindowPos(HWND_TOPMOST)` 每 2 秒 re-assert
 - 桌寵位置記錄在 config 中，重啟還原
-- 可用角色：`orange_cat` / `white_cat` / `calico` / `snoopy` / `shiba` / `goblin`
+- 可用角色：`orange_cat` / `white_cat` / `calico` / `snoopy` / `shiba` / `goblin` / `chick`
+- 角色中文名對照：`core/constants.py` 的 `CHARACTER_DISPLAY_NAMES`
 - 舊 config 自動遷移（`cat` → `orange_cat`、`dog` → `shiba`）
 
 ## 注意事項

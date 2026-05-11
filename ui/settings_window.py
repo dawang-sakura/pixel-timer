@@ -8,23 +8,28 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
 
+from core.constants import CHARACTER_OPTIONS, CHARACTER_DISPLAY_NAMES
+
 PET_COLUMNS = ["角色", "秒數", "訊息"]
-CHARACTER_OPTIONS = ["orange_cat", "white_cat", "calico", "snoopy", "shiba", "goblin"]
+_CHAR_ID_ROLE = Qt.ItemDataRole.UserRole + 1
 
 
 class CharacterDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         combo = QComboBox(parent)
-        combo.addItems(CHARACTER_OPTIONS)
+        for cid in CHARACTER_OPTIONS:
+            combo.addItem(CHARACTER_DISPLAY_NAMES.get(cid, cid), cid)
         return combo
 
     def setEditorData(self, editor, index):
-        value = index.data(Qt.ItemDataRole.DisplayRole)
-        idx = editor.findText(value)
+        char_id = index.data(_CHAR_ID_ROLE) or "orange_cat"
+        idx = editor.findData(char_id)
         editor.setCurrentIndex(idx if idx >= 0 else 0)
 
     def setModelData(self, editor, model, index):
-        model.setData(index, editor.currentText(), Qt.ItemDataRole.EditRole)
+        char_id = editor.currentData()
+        model.setData(index, CHARACTER_DISPLAY_NAMES.get(char_id, char_id), Qt.ItemDataRole.EditRole)
+        model.setData(index, char_id, _CHAR_ID_ROLE)
 
 
 class SettingsWindow(QDialog):
@@ -104,8 +109,10 @@ class SettingsWindow(QDialog):
                 "position": {"x": -1, "y": -1},
             }
 
-        item_char = QTableWidgetItem(pet_data.get("character", "orange_cat"))
+        char_id = pet_data.get("character", "orange_cat")
+        item_char = QTableWidgetItem(CHARACTER_DISPLAY_NAMES.get(char_id, char_id))
         item_char.setData(Qt.ItemDataRole.UserRole, pet_data["id"])
+        item_char.setData(_CHAR_ID_ROLE, char_id)
         self.pet_table.setItem(row, 0, item_char)
         self.pet_table.setItem(row, 1, QTableWidgetItem(str(pet_data.get("duration_sec", 60))))
         self.pet_table.setItem(row, 2, QTableWidgetItem(pet_data.get("message", "時間到！")))
@@ -171,7 +178,7 @@ class SettingsWindow(QDialog):
             dur_item = self.pet_table.item(row, 1)
             msg_item = self.pet_table.item(row, 2)
 
-            char = (char_item.text().strip() if char_item else "orange_cat")
+            char = (char_item.data(_CHAR_ID_ROLE) if char_item else None) or "orange_cat"
             dur_text = (dur_item.text().strip() if dur_item else "60")
             msg = (msg_item.text().strip() if msg_item else "時間到！")
             pet_id = char_item.data(Qt.ItemDataRole.UserRole) if char_item else None

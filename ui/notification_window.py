@@ -11,6 +11,7 @@ _CHARACTER_COLORS = {
     "snoopy":     ("#212121", "#FAFAFA"),
     "shiba":      ("#795548", "#FFF8E1"),
     "goblin":     ("#1B5E20", "#E8F5E9"),
+    "chick":      ("#F9A825", "#FFFDE7"),
 }
 _DEFAULT_COLORS = ("#37474F", "#ECEFF1")
 
