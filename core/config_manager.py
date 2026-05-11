@@ -3,32 +3,31 @@ import json
 from pathlib import Path
 
 DEFAULT_CONFIG = {
-    "hotkeys": [
+    "pets": [
         {
-            "id": "preset_1",
-            "key": "ctrl+shift+1",
+            "id": "pet_1",
+            "character": "cat",
             "duration_sec": 180,
             "message": "休息一下！",
-            "character": "cat",
+            "position": {"x": -1, "y": -1},
         },
         {
-            "id": "preset_2",
-            "key": "ctrl+shift+2",
+            "id": "pet_2",
+            "character": "dog",
             "duration_sec": 300,
             "message": "時間到！",
-            "character": "dog",
+            "position": {"x": -1, "y": -1},
         },
         {
-            "id": "preset_3",
-            "key": "ctrl+shift+3",
+            "id": "pet_3",
+            "character": "goblin",
             "duration_sec": 1500,
             "message": "番茄鐘結束！",
-            "character": "goblin",
+            "position": {"x": -1, "y": -1},
         },
     ],
     "global": {
         "sound_enabled": True,
-        "spawn_corner": "bottom_right",
     },
 }
 
@@ -43,8 +42,12 @@ class ConfigManager:
 
     def load(self):
         if self._path.exists():
-            with open(self._path, "r", encoding="utf-8") as f:
-                self._data = json.load(f)
+            try:
+                with open(self._path, "r", encoding="utf-8") as f:
+                    self._data = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                self._data = copy.deepcopy(DEFAULT_CONFIG)
+                self.save()
         else:
             self._data = copy.deepcopy(DEFAULT_CONFIG)
             self.save()
@@ -54,36 +57,44 @@ class ConfigManager:
         with open(self._path, "w", encoding="utf-8") as f:
             json.dump(self._data, f, ensure_ascii=False, indent=2)
 
-    def get_hotkeys(self):
-        return self._data.get("hotkeys", [])
+    # --- Pet accessors ---
 
-    def get_hotkey(self, hotkey_id):
-        for hk in self._data.get("hotkeys", []):
-            if hk["id"] == hotkey_id:
-                return hk
+    def get_pets(self):
+        return self._data.get("pets", [])
+
+    def get_pet(self, pet_id):
+        for pet in self._data.get("pets", []):
+            if pet["id"] == pet_id:
+                return pet
         return None
 
-    def update_hotkey(self, hotkey_id, data):
-        for i, hk in enumerate(self._data["hotkeys"]):
-            if hk["id"] == hotkey_id:
-                self._data["hotkeys"][i].update(data)
+    def update_pet(self, pet_id, data):
+        for i, pet in enumerate(self._data.get("pets", [])):
+            if pet["id"] == pet_id:
+                self._data["pets"][i].update(data)
                 self.save()
                 return True
         return False
 
-    def add_hotkey(self, data):
-        self._data["hotkeys"].append(data)
+    def add_pet(self, data):
+        self._data["pets"].append(data)
         self.save()
 
-    def remove_hotkey(self, hotkey_id):
-        self._data["hotkeys"] = [
-            hk for hk in self._data["hotkeys"] if hk["id"] != hotkey_id
+    def remove_pet(self, pet_id):
+        self._data["pets"] = [
+            pet for pet in self._data["pets"] if pet["id"] != pet_id
         ]
         self.save()
 
-    def set_hotkeys(self, hotkeys):
-        self._data["hotkeys"] = hotkeys
+    def set_pets(self, pets):
+        self._data["pets"] = pets
         self.save()
+
+    def update_pet_position(self, pet_id, x, y):
+        """Convenience method: update position for a single pet."""
+        return self.update_pet(pet_id, {"position": {"x": x, "y": y}})
+
+    # --- Global accessors ---
 
     def get_global(self):
         return self._data.get("global", {})

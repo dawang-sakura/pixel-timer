@@ -49,7 +49,7 @@ class TimerEngine(QObject):
             self.cancel(timer_id)
 
     def is_running(self, timer_id=None):
-        if timer_id:
+        if timer_id is not None:
             return timer_id in self._timers
         return len(self._timers) > 0
 

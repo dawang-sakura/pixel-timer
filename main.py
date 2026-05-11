@@ -2,7 +2,6 @@ import sys
 from PySide6.QtWidgets import QApplication
 from core.config_manager import ConfigManager
 from core.timer_engine import TimerEngine
-from core.hotkey_manager import HotkeyManager
 from ui.tray_app import TrayApp
 
 
@@ -13,8 +12,7 @@ def main():
 
     config = ConfigManager()
     timer = TimerEngine()
-    hotkeys = HotkeyManager()
-    tray = TrayApp(config, hotkeys, timer)
+    tray = TrayApp(config, timer)
     tray.show()
 
     sys.exit(app.exec())
