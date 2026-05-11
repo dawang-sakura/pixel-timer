@@ -22,7 +22,7 @@ pixel_timer/
   sprites/sprite_loader.py    # PNG 載入 + 快取
   sprites/animation.py        # 動畫狀態機（idle/counting/finished）
   sprites/generate_sprites.py # Pillow 素材生成腳本
-  sprites/assets/             # 像素素材（cat/dog/goblin × 3 state × 2 frame）
+  sprites/assets/             # 像素素材（6 角色 × 3 state × 2 frame = 36 PNG）
   config/settings.json        # 使用者設定（gitignore）
 ```
 
@@ -30,6 +30,7 @@ pixel_timer/
 - Phase 1: 核心引擎（系統匣 + 熱鍵 + 計時 + QMessageBox 通知）✅
 - Phase 2: 設定 GUI（PySide6 三 Tab 設定視窗 + 熱鍵錄製 + 衝突偵測）✅
 - Phase 3: 桌寵觸發系統 + 像素動畫 ✅
+- Phase 3.5: 強制置頂（Win32 SetWindowPos）+ 角色換血（6 角色）✅
 - Phase 4: PyInstaller 打包
 
 ## 開發指令
@@ -45,7 +46,10 @@ pixel_timer/
 - 單一 PySide6 事件迴圈，不混用 threading/pygame
 - 支援多組計時器同時運行
 - 每隻桌寵 = 獨立 QWidget，自行管理拖曳與點擊事件
+- 桌寵強制置頂：Win32 `SetWindowPos(HWND_TOPMOST)` 每 2 秒 re-assert
 - 桌寵位置記錄在 config 中，重啟還原
+- 可用角色：`orange_cat` / `white_cat` / `calico` / `snoopy` / `shiba` / `goblin`
+- 舊 config 自動遷移（`cat` → `orange_cat`、`dog` → `shiba`）
 
 ## 注意事項
 - `config/settings.json` 在 `.gitignore` 中，首次執行自動生成預設值

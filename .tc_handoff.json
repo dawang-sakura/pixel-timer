@@ -1,12 +1,11 @@
 {
-  "phase": 3,
-  "timestamp": "2026-05-11T20:30:00+08:00",
+  "phase": 3.5,
+  "timestamp": "2026-05-11T21:45:00+08:00",
   "agents": [
-    { "role": "規劃", "agent": "planner (inline)", "status": "done", "summary": "Gap analysis 9 items, 5 wave execution plan" },
-    { "role": "執行-基礎", "agent": "code-architect", "status": "done", "summary": "config pets schema + 18 sprite PNGs + sprite_loader + animation state machine" },
-    { "role": "執行-UI", "agent": "code-architect", "status": "done", "summary": "pet_widget + notification_window + settings rework + tray_app + main + cleanup" },
-    { "role": "審查-Python", "agent": "python-reviewer", "status": "done", "summary": "Found 2 CRITICAL + 3 HIGH + 3 MEDIUM + 3 LOW, all fixed" },
-    { "role": "審查-架構", "agent": "code-reviewer", "status": "done", "summary": "Found 2 CRITICAL + 5 HIGH + 5 MEDIUM + 5 LOW, all fixed" },
-    { "role": "修復", "agent": "main (direct edits)", "status": "done", "summary": "Fixed 12 issues across 6 files" }
+    { "role": "執行A", "agent": "code-architect", "status": "done", "summary": "G1 SetWindowPos topmost + G4/G5/G6 character rename to 6 new names" },
+    { "role": "執行B", "agent": "code-architect", "status": "done", "summary": "G2 sprite generator rewrite 6 characters + G3 36 PNGs generated" },
+    { "role": "清理", "agent": "direct", "status": "done", "summary": "G7 deleted old settings.json + old cat/dog sprite dirs" },
+    { "role": "審查", "agent": "python-reviewer", "status": "done", "summary": "1 HIGH + 3 MEDIUM found and fixed" },
+    { "role": "修復", "agent": "main", "status": "done", "summary": "argtypes 64-bit fix, closeEvent timer stop, shiba color, legacy migration" }
   ]
 }

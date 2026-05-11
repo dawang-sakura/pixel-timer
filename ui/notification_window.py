@@ -5,9 +5,12 @@ from PySide6.QtGui import QPainter, QColor, QFont, QPen, QPolygon
 
 # Character palette: (border_hex, fill_hex)
 _CHARACTER_COLORS = {
-    "cat":    ("#E65100", "#FFF3E0"),
-    "dog":    ("#4E342E", "#EFEBE9"),
-    "goblin": ("#1B5E20", "#E8F5E9"),
+    "orange_cat": ("#E65100", "#FFF3E0"),
+    "white_cat":  ("#78909C", "#ECEFF1"),
+    "calico":     ("#5D4037", "#EFEBE9"),
+    "snoopy":     ("#212121", "#FAFAFA"),
+    "shiba":      ("#795548", "#FFF8E1"),
+    "goblin":     ("#1B5E20", "#E8F5E9"),
 }
 _DEFAULT_COLORS = ("#37474F", "#ECEFF1")
 

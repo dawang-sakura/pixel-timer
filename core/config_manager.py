@@ -6,21 +6,21 @@ DEFAULT_CONFIG = {
     "pets": [
         {
             "id": "pet_1",
-            "character": "cat",
+            "character": "orange_cat",
             "duration_sec": 180,
             "message": "休息一下！",
             "position": {"x": -1, "y": -1},
         },
         {
             "id": "pet_2",
-            "character": "dog",
+            "character": "snoopy",
             "duration_sec": 300,
             "message": "時間到！",
             "position": {"x": -1, "y": -1},
         },
         {
             "id": "pet_3",
-            "character": "goblin",
+            "character": "shiba",
             "duration_sec": 1500,
             "message": "番茄鐘結束！",
             "position": {"x": -1, "y": -1},
@@ -30,6 +30,9 @@ DEFAULT_CONFIG = {
         "sound_enabled": True,
     },
 }
+
+
+_LEGACY_CHAR_MAP = {"cat": "orange_cat", "dog": "shiba"}
 
 
 class ConfigManager:
@@ -50,6 +53,17 @@ class ConfigManager:
                 self.save()
         else:
             self._data = copy.deepcopy(DEFAULT_CONFIG)
+            self.save()
+        self._migrate_legacy_characters()
+
+    def _migrate_legacy_characters(self):
+        changed = False
+        for pet in self._data.get("pets", []):
+            mapped = _LEGACY_CHAR_MAP.get(pet.get("character"))
+            if mapped:
+                pet["character"] = mapped
+                changed = True
+        if changed:
             self.save()
 
     def save(self):

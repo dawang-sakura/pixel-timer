@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
 
 PET_COLUMNS = ["角色", "秒數", "訊息"]
-CHARACTER_OPTIONS = ["cat", "dog", "goblin"]
+CHARACTER_OPTIONS = ["orange_cat", "white_cat", "calico", "snoopy", "shiba", "goblin"]
 
 
 class CharacterDelegate(QStyledItemDelegate):
@@ -98,13 +98,13 @@ class SettingsWindow(QDialog):
         if pet_data is None:
             pet_data = {
                 "id": f"pet_{uuid.uuid4().hex[:8]}",
-                "character": "cat",
+                "character": "orange_cat",
                 "duration_sec": 60,
                 "message": "時間到！",
                 "position": {"x": -1, "y": -1},
             }
 
-        item_char = QTableWidgetItem(pet_data.get("character", "cat"))
+        item_char = QTableWidgetItem(pet_data.get("character", "orange_cat"))
         item_char.setData(Qt.ItemDataRole.UserRole, pet_data["id"])
         self.pet_table.setItem(row, 0, item_char)
         self.pet_table.setItem(row, 1, QTableWidgetItem(str(pet_data.get("duration_sec", 60))))
@@ -171,7 +171,7 @@ class SettingsWindow(QDialog):
             dur_item = self.pet_table.item(row, 1)
             msg_item = self.pet_table.item(row, 2)
 
-            char = (char_item.text().strip() if char_item else "cat")
+            char = (char_item.text().strip() if char_item else "orange_cat")
             dur_text = (dur_item.text().strip() if dur_item else "60")
             msg = (msg_item.text().strip() if msg_item else "時間到！")
             pet_id = char_item.data(Qt.ItemDataRole.UserRole) if char_item else None
@@ -190,7 +190,7 @@ class SettingsWindow(QDialog):
             if not msg:
                 msg = "時間到！"
             if char not in CHARACTER_OPTIONS:
-                char = "cat"
+                char = "orange_cat"
 
             # Preserve existing position
             existing = self.config.get_pet(pet_id)

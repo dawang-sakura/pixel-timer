@@ -1,6 +1,23 @@
+import ctypes
+import ctypes.wintypes
+
 from PySide6.QtWidgets import QWidget, QLabel, QMenu, QApplication
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QPixmap
+
+_HWND_TOPMOST = -1
+_SWP_NOMOVE = 0x0002
+_SWP_NOSIZE = 0x0001
+_SWP_NOACTIVATE = 0x0010
+_SWP_FLAGS = _SWP_NOMOVE | _SWP_NOSIZE | _SWP_NOACTIVATE
+
+_user32 = ctypes.windll.user32
+_user32.SetWindowPos.argtypes = [
+    ctypes.wintypes.HWND, ctypes.wintypes.HWND,
+    ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+    ctypes.wintypes.UINT,
+]
+_user32.SetWindowPos.restype = ctypes.wintypes.BOOL
 
 
 class PetWidget(QWidget):
@@ -28,6 +45,11 @@ class PetWidget(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFixedSize(48, 48)
 
+        # Force topmost via Win32 (re-asserted every 2 seconds)
+        self._topmost_timer = QTimer(self)
+        self._topmost_timer.timeout.connect(self._ensure_topmost)
+        self._topmost_timer.start(2000)
+
         # Sprite label
         self._label = QLabel(self)
         self._label.setGeometry(0, 0, 48, 48)
@@ -47,6 +69,21 @@ class PetWidget(QWidget):
             self._auto_place()
         else:
             self.move(pos["x"], pos["y"])
+
+    def _ensure_topmost(self):
+        if self.isVisible():
+            hwnd = int(self.winId())
+            _user32.SetWindowPos(
+                hwnd, _HWND_TOPMOST, 0, 0, 0, 0, _SWP_FLAGS
+            )
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._ensure_topmost()
+
+    def closeEvent(self, event):
+        self._topmost_timer.stop()
+        super().closeEvent(event)
 
     def _auto_place(self):
         screen = QApplication.primaryScreen()
