@@ -11,7 +11,7 @@ COLORS = {
     "orange_cat": {"body": (255, 152, 0, 255), "dark": (200, 110, 0, 255), "eye": (30, 30, 30, 255)},
     "white_cat":  {"body": (240, 240, 240, 255), "dark": (189, 189, 189, 255), "eye": (30, 30, 30, 255), "pink": (244, 143, 177, 255)},
     "calico":     {"body": (250, 250, 250, 255), "dark": (158, 158, 158, 255), "eye": (30, 30, 30, 255), "orange": (255, 152, 0, 255), "black": (50, 50, 50, 255)},
-    "snoopy":     {"body": (250, 250, 250, 255), "dark": (33, 33, 33, 255), "eye": (70, 130, 180, 255), "heart": (205, 60, 70, 255)},
+    "snoopy":     {"body": (250, 250, 250, 255), "dark": (33, 33, 33, 255), "heart": (205, 60, 70, 255)},
     "shiba":      {"body": (255, 171, 64, 255), "dark": (121, 85, 72, 255), "eye": (30, 30, 30, 255), "white": (255, 248, 225, 255)},
     "goblin":     {"body": (76, 175, 80, 255), "dark": (40, 120, 45, 255), "eye": (255, 220, 0, 255)},
     "chick":      {"body": (249, 168, 37, 255), "dark": (230, 130, 0, 255), "eye": (30, 30, 30, 255), "comb": (244, 67, 54, 255), "beak": (255, 140, 0, 255)},
@@ -20,7 +20,6 @@ COLORS = {
 TRANSPARENT = (0, 0, 0, 0)
 WHITE       = (255, 255, 255, 255)
 SPARKLE     = (255, 240, 80, 255)
-COUNTING_BORDER = (255, 220, 60, 220)
 W, H = 48, 48
 
 ALL_CHARACTERS = ("orange_cat", "white_cat", "calico", "snoopy", "shiba", "goblin", "chick")
@@ -28,34 +27,14 @@ ALL_CHARACTERS = ("orange_cat", "white_cat", "calico", "snoopy", "shiba", "gobli
 def new_img():
     return Image.new("RGBA", (W, H), TRANSPARENT)
 
-def brighter(color, amount=40):
-    r, g, b, a = color
-    return (min(255, r + amount), min(255, g + amount), min(255, b + amount), a)
-
-def counting_tint(character):
-    return brighter(COLORS[character]["body"], 50)
-
-def draw_counting_border(img):
-    bbox = img.getbbox()
-    if not bbox:
-        return
-    x0, y0, x1, y1 = bbox
-    d = ImageDraw.Draw(img)
-    for offset in range(2):
-        left = max(0, x0 - 1 - offset)
-        top = max(0, y0 - 1 - offset)
-        right = min(W - 1, x1 + offset)
-        bottom = min(H - 1, y1 + offset)
-        d.rectangle([left, top, right, bottom], outline=COUNTING_BORDER)
-
 # ---------------------------------------------------------------------------
 # Characters
 # ---------------------------------------------------------------------------
 
-def draw_orange_cat(img, dy=0, tint=None, sparkles=None):
+def draw_orange_cat(img, dy=0, sparkles=None):
     d = ImageDraw.Draw(img)
     c = COLORS["orange_cat"]
-    body = tint if tint else c["body"]
+    body = c["body"]
     dark = c["dark"]
     d.rectangle([16, 24+dy, 31, 38+dy], fill=body)
     d.rectangle([14, 14+dy, 33, 27+dy], fill=body)
@@ -71,10 +50,10 @@ def draw_orange_cat(img, dy=0, tint=None, sparkles=None):
     if sparkles:
         for sx, sy in sparkles: d.rectangle([sx, sy, sx+1, sy+1], fill=SPARKLE)
 
-def draw_white_cat(img, dy=0, tint=None, sparkles=None):
+def draw_white_cat(img, dy=0, sparkles=None):
     d = ImageDraw.Draw(img)
     c = COLORS["white_cat"]
-    body = tint if tint else c["body"]
+    body = c["body"]
     dark = c["dark"]
     pink = c["pink"]
     d.rectangle([16, 24+dy, 31, 38+dy], fill=body)
@@ -93,10 +72,10 @@ def draw_white_cat(img, dy=0, tint=None, sparkles=None):
     if sparkles:
         for sx, sy in sparkles: d.rectangle([sx, sy, sx+1, sy+1], fill=SPARKLE)
 
-def draw_calico(img, dy=0, tint=None, sparkles=None):
+def draw_calico(img, dy=0, sparkles=None):
     d = ImageDraw.Draw(img)
     c = COLORS["calico"]
-    body = tint if tint else c["body"]
+    body = c["body"]
     dark = c["dark"]
     orange = c["orange"]
     black = c["black"]
@@ -116,41 +95,38 @@ def draw_calico(img, dy=0, tint=None, sparkles=None):
     if sparkles:
         for sx, sy in sparkles: d.rectangle([sx, sy, sx+1, sy+1], fill=SPARKLE)
 
-def draw_snoopy(img, dy=0, tint=None, sparkles=None):
+def draw_snoopy(img, dy=0, sparkles=None):
     d = ImageDraw.Draw(img)
     c = COLORS["snoopy"]
-    body = tint if tint else c["body"]
+    body = c["body"]
     dark = c["dark"]
-    blue = c["eye"]
     heart = c["heart"]
 
-    # Ear (black, drooping from back of head)
-    d.rectangle([2, 2+dy, 7, 6+dy], fill=dark)
-    d.rectangle([0, 6+dy, 5, 18+dy], fill=dark)
+    d.rectangle([1, 1+dy, 8, 5+dy], fill=dark)
+    d.rectangle([0, 5+dy, 6, 16+dy], fill=dark)
+    d.rectangle([5, 0+dy, 24, 20+dy], fill=dark)
+    d.rectangle([3, 2+dy, 6, 18+dy], fill=dark)
+    d.rectangle([23, 8+dy, 35, 16+dy], fill=dark)
+    d.rectangle([8, 20+dy, 22, 35+dy], fill=dark)
+    d.rectangle([21, 22+dy, 28, 25+dy], fill=dark)
+    d.rectangle([21, 31+dy, 28, 34+dy], fill=dark)
+    d.rectangle([7, 35+dy, 13, 43+dy], fill=dark)
+    d.rectangle([16, 35+dy, 22, 43+dy], fill=dark)
 
-    # Head (white, large oval facing right)
-    d.rectangle([8, 2+dy, 22, 4+dy], fill=body)
-    d.rectangle([6, 4+dy, 25, 20+dy], fill=body)
-    d.rectangle([4, 6+dy, 7, 18+dy], fill=body)
+    d.rectangle([7, 2+dy, 22, 19+dy], fill=body)
+    d.rectangle([23, 10+dy, 33, 14+dy], fill=body)
+    d.rectangle([10, 21+dy, 20, 33+dy], fill=body)
+    d.rectangle([23, 23+dy, 27, 24+dy], fill=body)
+    d.rectangle([23, 32+dy, 27, 33+dy], fill=body)
 
-    # Snout (extending right)
-    d.rectangle([24, 10+dy, 33, 16+dy], fill=body)
-    d.rectangle([32, 8+dy, 35, 12+dy], fill=dark)
+    d.rectangle([7, 2+dy, 11, 5+dy], fill=dark)
+    d.rectangle([7, 5+dy, 9, 11+dy], fill=dark)
+    d.rectangle([16, 8+dy, 18, 10+dy], fill=dark)
+    d.rectangle([33, 10+dy, 35, 12+dy], fill=dark)
+    d.rectangle([20, 14+dy, 22, 15+dy], fill=dark)
+    d.rectangle([17, 16+dy, 20, 17+dy], fill=dark)
+    d.rectangle([14, 18+dy, 17, 19+dy], fill=dark)
 
-    # Eye (blue)
-    d.rectangle([12, 12+dy, 15, 15+dy], fill=blue)
-
-    # Mouth line
-    d.rectangle([20, 17+dy, 33, 18+dy], fill=dark)
-
-    # Body (white, narrow)
-    d.rectangle([10, 20+dy, 23, 34+dy], fill=body)
-
-    # Arms (reaching right toward heart)
-    d.rectangle([22, 22+dy, 28, 25+dy], fill=body)
-    d.rectangle([22, 31+dy, 28, 34+dy], fill=body)
-
-    # Heart (red pixel heart)
     d.rectangle([29, 22+dy, 33, 26+dy], fill=heart)
     d.rectangle([35, 22+dy, 39, 26+dy], fill=heart)
     d.rectangle([28, 26+dy, 40, 30+dy], fill=heart)
@@ -158,17 +134,14 @@ def draw_snoopy(img, dy=0, tint=None, sparkles=None):
     d.rectangle([32, 33+dy, 36, 35+dy], fill=heart)
     d.rectangle([33, 35+dy, 35, 36+dy], fill=heart)
 
-    # Feet (black)
-    d.rectangle([7, 34+dy, 13, 40+dy], fill=dark)
-    d.rectangle([16, 34+dy, 22, 40+dy], fill=dark)
-
     if sparkles:
-        for sx, sy in sparkles: d.rectangle([sx, sy, sx+1, sy+1], fill=SPARKLE)
+        for sx, sy in sparkles:
+            d.rectangle([sx, sy, sx+1, sy+1], fill=SPARKLE)
 
-def draw_shiba(img, dy=0, tint=None, sparkles=None):
+def draw_shiba(img, dy=0, sparkles=None):
     d = ImageDraw.Draw(img)
     c = COLORS["shiba"]
-    body = tint if tint else c["body"]
+    body = c["body"]
     dark = c["dark"]
     white = c["white"]
     d.rectangle([14, 24+dy, 33, 38+dy], fill=body)
@@ -187,10 +160,10 @@ def draw_shiba(img, dy=0, tint=None, sparkles=None):
     if sparkles:
         for sx, sy in sparkles: d.rectangle([sx, sy, sx+1, sy+1], fill=SPARKLE)
 
-def draw_goblin(img, dy=0, tint=None, sparkles=None):
+def draw_goblin(img, dy=0, sparkles=None):
     d = ImageDraw.Draw(img)
     c = COLORS["goblin"]
-    body = tint if tint else c["body"]
+    body = c["body"]
     dark = c["dark"]
     d.rectangle([16, 25+dy, 31, 38+dy], fill=body)
     d.rectangle([15, 13+dy, 32, 26+dy], fill=body)
@@ -210,10 +183,10 @@ def draw_goblin(img, dy=0, tint=None, sparkles=None):
     if sparkles:
         for sx, sy in sparkles: d.rectangle([sx, sy, sx+1, sy+1], fill=SPARKLE)
 
-def draw_chick(img, dy=0, tint=None, sparkles=None):
+def draw_chick(img, dy=0, sparkles=None):
     d = ImageDraw.Draw(img)
     c = COLORS["chick"]
-    body = tint if tint else c["body"]
+    body = c["body"]
     dark = c["dark"]
     comb = c["comb"]
     beak = c["beak"]
@@ -264,14 +237,10 @@ def generate_all(base_path: Path):
         char_dir = base_path / character
         char_dir.mkdir(parents=True, exist_ok=True)
         for frame in (0, 1):
-            dy = 0 if frame == 0 else 1
-            img = new_img(); draw_fn(img, dy=dy); img.save(char_dir / f"idle_{frame}.png")
-        tint = counting_tint(character)
+            img = new_img(); draw_fn(img, dy=0); img.save(char_dir / f"idle_{frame}.png")
         for frame in (0, 1):
-            dy = 0 if frame == 0 else -1
-            img = new_img(); draw_fn(img, dy=dy, tint=tint)
-            if frame == 1:
-                draw_counting_border(img)
+            dy = 0 if frame == 0 else 1
+            img = new_img(); draw_fn(img, dy=dy)
             img.save(char_dir / f"counting_{frame}.png")
         for frame in (0, 1):
             dy = -6 if frame == 0 else -8
