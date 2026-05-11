@@ -32,6 +32,7 @@ pixel_timer/
 - Phase 3: 桌寵觸發系統 + 像素動畫 ✅
 - Phase 3.5: 強制置頂（Win32 SetWindowPos）+ 角色換血（6 角色）✅
 - Phase 4: Bug 修復 + 角色增強（置頂 event hook + 描邊閃爍 + 小雞 + 中文名 + 史奴比重繪）✅
+- Phase 4.1: Snoopy outline-first 重繪 + 動畫行為調整 + 死碼清理 ✅
 - Phase 5: Cron 鬧鐘功能
 - Phase 6: GUI 像素風古早遊戲介面
 - Phase 7: PyInstaller 打包

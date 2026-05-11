@@ -1,9 +1,9 @@
 {
-  "phase": 4,
-  "timestamp": "2026-05-11T22:10:00+08:00",
+  "phase": 4.1,
+  "timestamp": "2026-05-11T23:30:00+08:00",
   "agents": [
-    { "role": "規劃", "agent": "planner", "status": "done", "summary": "Gap analysis 9 items, 施工順序定義完成" },
-    { "role": "執行", "agent": "code-architect", "status": "done", "summary": "G1-G9 全部實作：SetWinEventHook、counting 描邊、小雞角色、中文名、史奴比重繪" },
-    { "role": "審查", "agent": "python-reviewer", "status": "done", "summary": "2 HIGH 已修（init 順序 + list copy）、1 MEDIUM 已修（fallback 預設值）" }
+    { "role": "規劃", "agent": "planner", "status": "done", "summary": "Phase 4.1 完成，待施工 Phase 5 Cron 鬧鐘" },
+    { "role": "執行", "agent": "code-architect", "status": "done", "summary": "Snoopy outline-first 重繪 + 動畫行為統一（idle 靜止、counting 浮動無著色、finished 保持）" },
+    { "role": "審查", "agent": "python-reviewer", "status": "done", "summary": "2 HIGH 已修：死 tint 參數移除（7 函式）、死 eye 鍵移除自 COLORS" }
   ]
 }

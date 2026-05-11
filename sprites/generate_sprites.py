@@ -11,10 +11,10 @@ COLORS = {
     "orange_cat": {"body": (255, 152, 0, 255), "dark": (200, 110, 0, 255), "eye": (30, 30, 30, 255)},
     "white_cat":  {"body": (240, 240, 240, 255), "dark": (189, 189, 189, 255), "eye": (30, 30, 30, 255), "pink": (244, 143, 177, 255)},
     "calico":     {"body": (250, 250, 250, 255), "dark": (158, 158, 158, 255), "eye": (30, 30, 30, 255), "orange": (255, 152, 0, 255), "black": (50, 50, 50, 255)},
-    "snoopy":     {"body": (250, 250, 250, 255), "dark": (33, 33, 33, 255), "heart": (205, 60, 70, 255)},
     "shiba":      {"body": (255, 171, 64, 255), "dark": (121, 85, 72, 255), "eye": (30, 30, 30, 255), "white": (255, 248, 225, 255)},
     "goblin":     {"body": (76, 175, 80, 255), "dark": (40, 120, 45, 255), "eye": (255, 220, 0, 255)},
     "chick":      {"body": (249, 168, 37, 255), "dark": (230, 130, 0, 255), "eye": (30, 30, 30, 255), "comb": (244, 67, 54, 255), "beak": (255, 140, 0, 255)},
+    "snoopy":     {"body": (255, 255, 255, 255), "dark": (0, 0, 0, 255), "eye": (55, 110, 185, 255), "heart": (225, 35, 35, 255)},
 }
 
 TRANSPARENT = (0, 0, 0, 0)
@@ -95,46 +95,50 @@ def draw_calico(img, dy=0, sparkles=None):
     if sparkles:
         for sx, sy in sparkles: d.rectangle([sx, sy, sx+1, sy+1], fill=SPARKLE)
 
+_SNOOPY_MAP = [
+    "....KKKKKKK..................",
+    "...KWWWWWWWKKKKKK............",
+    "..KWWWWWWWWWWWWWWKK..........",
+    ".KWWWKWWWWWKWWWWWWWK.........",
+    ".KWWWWWWWWWKWWWWWWWWKKK......",
+    ".KWWWWWWWWWWWWWWWWWWKKK......",
+    "KWWWWWWWWWWWWWWWWWWWK........",
+    "KWKWWWWWWWWWWWWWWWWWK........",
+    "KWKKKWWWWWWWWWWWWWWK.........",
+    "KWKWKKWWWKWWWWWWWWK..........",
+    "KWKKWKWWWWKWWWWWKK...RR...RR.",
+    "KWKKKKWWWWWKKKKK....RRRR.RRRR",
+    "KKWKKWKKWWWKK.....KKRRRRRRRRR",
+    ".KWWWWK.KKBBBK..KKWWRRRRRRRRR",
+    "..KKKK...BBWWWKKWWWWKRRRRRRRR",
+    ".........KKWWWWWWWKKKRRRRRRR.",
+    ".........KWWWWWWKK...RRRRRR..",
+    "........KWWWWWKKK.....RRRR...",
+    "........KWWWWWWWK......RR....",
+    "........KWWWWWWWK............",
+    "........KWWWWWWWK............",
+    ".......KKKWWWWWK.............",
+    ".......KWKWWWKK..............",
+    "........KWWWWWK..............",
+    ".........KKWKWWKK............",
+    "........KWWWWKWWWKK..........",
+    ".......KWWWWWWWWWWWK.........",
+    ".......KKKKKKKKKKKKK.........",
+]
+
 def draw_snoopy(img, dy=0, sparkles=None):
-    d = ImageDraw.Draw(img)
     c = COLORS["snoopy"]
-    body = c["body"]
-    dark = c["dark"]
-    heart = c["heart"]
-
-    d.rectangle([1, 1+dy, 8, 5+dy], fill=dark)
-    d.rectangle([0, 5+dy, 6, 16+dy], fill=dark)
-    d.rectangle([5, 0+dy, 24, 20+dy], fill=dark)
-    d.rectangle([3, 2+dy, 6, 18+dy], fill=dark)
-    d.rectangle([23, 8+dy, 35, 16+dy], fill=dark)
-    d.rectangle([8, 20+dy, 22, 35+dy], fill=dark)
-    d.rectangle([21, 22+dy, 28, 25+dy], fill=dark)
-    d.rectangle([21, 31+dy, 28, 34+dy], fill=dark)
-    d.rectangle([7, 35+dy, 13, 43+dy], fill=dark)
-    d.rectangle([16, 35+dy, 22, 43+dy], fill=dark)
-
-    d.rectangle([7, 2+dy, 22, 19+dy], fill=body)
-    d.rectangle([23, 10+dy, 33, 14+dy], fill=body)
-    d.rectangle([10, 21+dy, 20, 33+dy], fill=body)
-    d.rectangle([23, 23+dy, 27, 24+dy], fill=body)
-    d.rectangle([23, 32+dy, 27, 33+dy], fill=body)
-
-    d.rectangle([7, 2+dy, 11, 5+dy], fill=dark)
-    d.rectangle([7, 5+dy, 9, 11+dy], fill=dark)
-    d.rectangle([16, 8+dy, 18, 10+dy], fill=dark)
-    d.rectangle([33, 10+dy, 35, 12+dy], fill=dark)
-    d.rectangle([20, 14+dy, 22, 15+dy], fill=dark)
-    d.rectangle([17, 16+dy, 20, 17+dy], fill=dark)
-    d.rectangle([14, 18+dy, 17, 19+dy], fill=dark)
-
-    d.rectangle([29, 22+dy, 33, 26+dy], fill=heart)
-    d.rectangle([35, 22+dy, 39, 26+dy], fill=heart)
-    d.rectangle([28, 26+dy, 40, 30+dy], fill=heart)
-    d.rectangle([30, 30+dy, 38, 33+dy], fill=heart)
-    d.rectangle([32, 33+dy, 36, 35+dy], fill=heart)
-    d.rectangle([33, 35+dy, 35, 36+dy], fill=heart)
-
+    cmap = {"K": c["dark"], "W": c["body"], "B": c["eye"], "R": c["heart"]}
+    base = Image.new("RGBA", (29, 28), TRANSPARENT)
+    for row, line in enumerate(_SNOOPY_MAP):
+        for col, ch in enumerate(line):
+            if ch in cmap:
+                base.putpixel((col, row), cmap[ch])
+    scaled = base.resize((42, 40), Image.NEAREST)
+    ox, oy = (W - 42) // 2, H - 40 - 2 + dy
+    img.paste(scaled, (ox, oy), scaled)
     if sparkles:
+        d = ImageDraw.Draw(img)
         for sx, sy in sparkles:
             d.rectangle([sx, sy, sx+1, sy+1], fill=SPARKLE)
 
