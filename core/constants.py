@@ -1,5 +1,5 @@
 CHARACTER_OPTIONS = [
-    "orange_cat", "white_cat", "calico", "snoopy", "shiba", "goblin", "chick",
+    "orange_cat", "white_cat", "calico", "snoopy", "shiba", "goblin", "chick", "blue_eyes",
 ]
 
 CHARACTER_DISPLAY_NAMES = {
@@ -10,4 +10,5 @@ CHARACTER_DISPLAY_NAMES = {
     "shiba": "柴犬",
     "goblin": "哥布林",
     "chick": "小雞",
+    "blue_eyes": "青眼白龍",
 }

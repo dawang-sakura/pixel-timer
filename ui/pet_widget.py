@@ -5,7 +5,7 @@ from datetime import datetime
 
 from PySide6.QtWidgets import QWidget, QLabel, QMenu, QApplication
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QBitmap, QColor, QPainter, QPixmap
 
 from core.constants import CHARACTER_DISPLAY_NAMES
 
@@ -48,6 +48,17 @@ _user32.SetWinEventHook.restype = ctypes.wintypes.HANDLE
 _user32.UnhookWinEvent.argtypes = [ctypes.wintypes.HANDLE]
 _user32.UnhookWinEvent.restype = ctypes.wintypes.BOOL
 
+_dwmapi = ctypes.windll.dwmapi
+
+
+class _MARGINS(ctypes.Structure):
+    _fields_ = [
+        ("cxLeftWidth", ctypes.c_int),
+        ("cxRightWidth", ctypes.c_int),
+        ("cyTopHeight", ctypes.c_int),
+        ("cyBottomHeight", ctypes.c_int),
+    ]
+
 
 class PetWidget(QWidget):
     timer_toggled = Signal(str)       # pet_id
@@ -68,6 +79,7 @@ class PetWidget(QWidget):
         self._drag_pos = None
         self._drag_started_pos = None
         self._counting = False
+        self._last_mask_key = -1
 
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
@@ -86,6 +98,7 @@ class PetWidget(QWidget):
         initial = self._animator.current_pixmap()
         if initial and not initial.isNull():
             self._label.setPixmap(initial)
+            self._apply_mask(initial)
 
         pos = pet_config.get("position", {"x": -1, "y": -1})
         if pos.get("x", -1) == -1 or pos.get("y", -1) == -1:
@@ -133,6 +146,18 @@ class PetWidget(QWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self._ensure_topmost()
+        self._enable_transparency()
+
+    def _enable_transparency(self):
+        hwnd = int(self.winId())
+        margins = _MARGINS(-1, -1, -1, -1)
+        _dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(margins))
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
+        p.fillRect(self.rect(), QColor(0, 0, 0, 0))
+        p.end()
 
     def closeEvent(self, event):
         if self in PetWidget._all_widgets:
@@ -193,11 +218,24 @@ class PetWidget(QWidget):
 
     def update_frame(self, pixmap: QPixmap):
         if pixmap and not pixmap.isNull():
-            self._label.setPixmap(pixmap.scaled(
+            scaled = pixmap.scaled(
                 48, 48,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.FastTransformation,
-            ))
+            )
+            self._label.setPixmap(scaled)
+            self._apply_mask(scaled)
+
+    def _apply_mask(self, pixmap: QPixmap):
+        if not pixmap or pixmap.isNull():
+            return
+        key = pixmap.cacheKey()
+        if key == self._last_mask_key:
+            return
+        self._last_mask_key = key
+        mask_image = pixmap.toImage().createAlphaMask()
+        if not mask_image.isNull():
+            self.setMask(QBitmap.fromImage(mask_image))
 
     def set_tooltip_remaining(self, remaining_sec: int):
         m, s = divmod(remaining_sec, 60)

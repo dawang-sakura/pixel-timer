@@ -22,7 +22,7 @@ WHITE       = (255, 255, 255, 255)
 SPARKLE     = (255, 240, 80, 255)
 W, H = 48, 48
 
-ALL_CHARACTERS = ("orange_cat", "white_cat", "calico", "snoopy", "shiba", "goblin", "chick")
+ALL_CHARACTERS = ("orange_cat", "white_cat", "calico", "snoopy", "shiba", "goblin", "chick", "blue_eyes")
 
 def new_img():
     return Image.new("RGBA", (W, H), TRANSPARENT)
@@ -222,6 +222,40 @@ def draw_chick(img, dy=0, sparkles=None):
     if sparkles:
         for sx, sy in sparkles: d.rectangle([sx, sy, sx+1, sy+1], fill=SPARKLE)
 
+_BLUE_EYES_SRC = Path(__file__).parent / "assets" / "source" / "blue_eyes_src.png"
+
+def _add_outer_outline(img, color=(30, 55, 100, 255)):
+    w, h = img.size
+    result = Image.new("RGBA", (w + 2, h + 2), TRANSPARENT)
+    pixels = img.load()
+    rpx = result.load()
+    for y in range(h):
+        for x in range(w):
+            if pixels[x, y][3] > 128:
+                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    nx, ny = x + 1 + dx, y + 1 + dy
+                    if rpx[nx, ny][3] == 0:
+                        rpx[nx, ny] = color
+    result.paste(img, (1, 1), img)
+    return result
+
+def draw_blue_eyes(img, dy=0, sparkles=None):
+    src = Image.open(_BLUE_EYES_SRC).convert("RGBA")
+    native = src.resize((80, 80), Image.NEAREST)
+    bbox = native.getbbox()
+    cropped = native.crop(bbox) if bbox else native
+    cw, ch = cropped.size
+    ratio = min((W - 4) / cw, (H - 4) / ch)
+    fit = cropped.resize((int(cw * ratio), int(ch * ratio)), Image.NEAREST)
+    outlined = _add_outer_outline(fit)
+    ox = (W - outlined.width) // 2
+    oy = max(0, H - outlined.height - 2 + dy)
+    img.paste(outlined, (ox, oy), outlined)
+    if sparkles:
+        d = ImageDraw.Draw(img)
+        for sx, sy in sparkles:
+            d.rectangle([sx, sy, sx + 1, sy + 1], fill=SPARKLE)
+
 # ---------------------------------------------------------------------------
 
 SPARKLES = {0: [(6,10),(40,8),(8,36),(42,34),(23,5)], 1: [(4,20),(43,14),(5,42),(39,40),(38,22)]}
@@ -234,6 +268,7 @@ DRAW_FN = {
     "shiba":      draw_shiba,
     "goblin":     draw_goblin,
     "chick":      draw_chick,
+    "blue_eyes":  draw_blue_eyes,
 }
 
 def generate_all(base_path: Path):
