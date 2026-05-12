@@ -11,10 +11,11 @@ from sprites.animation import PetAnimator
 
 
 class TrayApp(QSystemTrayIcon):
-    def __init__(self, config_manager, timer_engine, parent=None):
+    def __init__(self, config_manager, timer_engine, alarm_engine, parent=None):
         super().__init__(parent)
         self.config = config_manager
         self.timer = timer_engine
+        self.alarm = alarm_engine
         self._settings_win = None
         self._pets = []           # list of (PetWidget, PetAnimator)
         self._notifications = []  # keep references alive until dismissed
@@ -69,6 +70,7 @@ class TrayApp(QSystemTrayIcon):
     def _connect_signals(self):
         self.timer.timer_finished.connect(self._on_timer_finished)
         self.timer.timer_tick.connect(self._on_timer_tick)
+        self.alarm.alarm_triggered.connect(self._on_alarm_triggered)
 
     # ------------------------------------------------------------------ pets
 
@@ -161,6 +163,44 @@ class TrayApp(QSystemTrayIcon):
             if animator:
                 animator.set_state("idle")
 
+    # ------------------------------------------------------------------ alarm callbacks
+
+    def _on_alarm_triggered(self, pet_id: str, message: str, character: str, alarm_index: int):
+        widget, animator = self._find_pet(pet_id)
+        if animator:
+            animator.set_state("finished")
+
+        if widget:
+            pet_pos = widget.pos()
+        else:
+            pet_pos = QPoint(100, 100)
+
+        notif = NotificationWindow(message, character, pet_pos)
+        self._notifications.append(notif)
+        notif.dismissed.connect(
+            lambda tid=pet_id, n=notif: self._on_alarm_notification_closed(tid, n)
+        )
+        notif.show()
+
+        pet_cfg = self.config.get_pet(pet_id)
+        if pet_cfg:
+            alarms = pet_cfg.get("alarms", [])
+            if (0 <= alarm_index < len(alarms)
+                    and alarms[alarm_index].get("repeat") == "once"
+                    and alarms[alarm_index].get("enabled", False)):
+                self.config.disable_alarm(pet_id, alarm_index)
+                if widget:
+                    widget.refresh_alarms(self.config.get_pet_alarms(pet_id))
+
+    def _on_alarm_notification_closed(self, pet_id: str, notif):
+        if notif in self._notifications:
+            self._notifications.remove(notif)
+        notif.deleteLater()
+        if not self.timer.is_running(pet_id):
+            _, animator = self._find_pet(pet_id)
+            if animator:
+                animator.set_state("idle")
+
     def _on_timer_tick(self, timer_id: str, remaining: int):
         self._update_status()
         widget, _ = self._find_pet(timer_id)
@@ -217,10 +257,12 @@ class TrayApp(QSystemTrayIcon):
         for tid in active_ids:
             self.timer.cancel(tid)
         self._create_pets()
+        self.alarm.clear_fired_cache()
 
     # ------------------------------------------------------------------ exit
 
     def _exit(self):
+        self.alarm.stop()
         active_ids = list(self.timer.get_active_timers().keys())
         for tid in active_ids:
             self.timer.cancel(tid)

@@ -13,16 +13,17 @@ Windows 桌面小工具：工具列旁的像素桌寵觸發倒數計時，時間
 ```
 pixel_timer/
   main.py                     # 入口
-  core/config_manager.py      # 設定讀寫（pets schema）
+  core/config_manager.py      # 設定讀寫（pets + alarms schema）+ atomic save
   core/timer_engine.py        # QTimer 計時引擎
-  ui/tray_app.py              # QSystemTrayIcon 系統匣 + 桌寵管理
-  ui/settings_window.py       # 設定 GUI（桌寵/一般/關於 三 Tab）
-  ui/pet_widget.py            # 桌寵浮動視窗（無框透明、拖曳、雙擊觸發）
+  core/alarm_engine.py        # QTimer 30s 掃描 HH:MM 鬧鐘觸發
+  ui/tray_app.py              # QSystemTrayIcon 系統匣 + 桌寵管理 + alarm signal 整合
+  ui/settings_window.py       # 設定 GUI（桌寵/一般/關於 三 Tab）+ 鬧鐘子區塊
+  ui/pet_widget.py            # 桌寵浮動視窗（無框透明、拖曳、雙擊觸發、鬧鐘 tooltip）
   ui/notification_window.py   # RPG 對話氣泡通知
   sprites/sprite_loader.py    # PNG 載入 + 快取
   sprites/animation.py        # 動畫狀態機（idle/counting/finished）
   sprites/generate_sprites.py # Pillow 素材生成腳本
-  sprites/assets/             # 像素素材（6 角色 × 3 state × 2 frame = 36 PNG）
+  sprites/assets/             # 像素素材（7 角色 × 3 state × 2 frame = 42 PNG）
   config/settings.json        # 使用者設定（gitignore）
 ```
 
@@ -34,7 +35,7 @@ pixel_timer/
 - Phase 4: Bug 修復 + 角色增強（置頂 event hook + 描邊閃爍 + 小雞 + 中文名 + 史奴比重繪）✅
 - Phase 4.1: Snoopy outline-first 重繪 + 動畫行為調整 + 死碼清理 ✅
 - Phase 4.2: Snoopy BRIK 像素圖案直抄 + 42×40 尺寸對齊 ✅
-- Phase 5: Cron 鬧鐘功能
+- Phase 5: Cron 鬧鐘功能（每隻桌寵定時自動提醒 + 設定 GUI）✅
 - Phase 6: GUI 像素風古早遊戲介面
 - Phase 7: PyInstaller 打包
 

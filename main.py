@@ -2,6 +2,7 @@ import sys
 from PySide6.QtWidgets import QApplication
 from core.config_manager import ConfigManager
 from core.timer_engine import TimerEngine
+from core.alarm_engine import AlarmEngine
 from ui.tray_app import TrayApp
 
 
@@ -12,8 +13,10 @@ def main():
 
     config = ConfigManager()
     timer = TimerEngine()
-    tray = TrayApp(config, timer)
+    alarm = AlarmEngine(config)
+    tray = TrayApp(config, timer, alarm)
     tray.show()
+    alarm.start()
 
     sys.exit(app.exec())
 

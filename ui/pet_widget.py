@@ -1,9 +1,13 @@
 import ctypes
 import ctypes.wintypes
 
+from datetime import datetime
+
 from PySide6.QtWidgets import QWidget, QLabel, QMenu, QApplication
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
+
+from core.constants import CHARACTER_DISPLAY_NAMES
 
 _HWND_TOPMOST = -1
 _SWP_NOMOVE = 0x0002
@@ -59,6 +63,8 @@ class PetWidget(QWidget):
 
         self._pet_id = pet_config["id"]
         self._animator = animator
+        self._alarms = pet_config.get("alarms", [])
+        self._character_name = pet_config.get("character", "")
         self._drag_pos = None
         self._drag_started_pos = None
         self._counting = False
@@ -86,6 +92,8 @@ class PetWidget(QWidget):
             self._auto_place()
         else:
             self.move(pos["x"], pos["y"])
+
+        self._update_idle_tooltip()
 
         PetWidget._all_widgets.append(self)
         PetWidget._install_hook()
@@ -198,7 +206,60 @@ class PetWidget(QWidget):
     def set_counting(self, counting: bool):
         self._counting = counting
         if not counting:
-            self.setToolTip("")
+            self._update_idle_tooltip()
+
+    def _update_idle_tooltip(self):
+        char_name = CHARACTER_DISPLAY_NAMES.get(self._character_name, self._character_name)
+        next_alarm = self._compute_next_alarm()
+        if next_alarm:
+            self.setToolTip(f"{char_name}\n下個鬧鐘: {next_alarm}")
+        else:
+            self.setToolTip(char_name)
+
+    def _compute_next_alarm(self):
+        now = datetime.now()
+        current_weekday = now.weekday()
+        now_minutes = now.hour * 60 + now.minute
+        best = None
+
+        for alarm in self._alarms:
+            if not alarm.get("enabled", False):
+                continue
+            t = alarm.get("time", "")
+            repeat = alarm.get("repeat", "daily")
+            try:
+                alarm_hour, alarm_min = map(int, t.split(":"))
+            except (ValueError, AttributeError):
+                continue
+
+            alarm_minutes = alarm_hour * 60 + alarm_min
+
+            fires_today = True
+            if repeat == "weekdays" and current_weekday >= 5:
+                fires_today = False
+
+            if fires_today and alarm_minutes > now_minutes:
+                delta = alarm_minutes - now_minutes
+            elif repeat == "once":
+                continue
+            else:
+                if repeat == "weekdays" and current_weekday == 4:
+                    delta = (alarm_minutes - now_minutes) + 3 * 1440
+                elif repeat == "weekdays" and current_weekday >= 5:
+                    days_until_monday = 7 - current_weekday
+                    delta = alarm_minutes + days_until_monday * 1440 - now_minutes
+                else:
+                    delta = (alarm_minutes - now_minutes) + 1440
+
+            if best is None or delta < best[0]:
+                best = (delta, t)
+
+        return best[1] if best else None
+
+    def refresh_alarms(self, alarms):
+        self._alarms = alarms
+        if not self._counting:
+            self._update_idle_tooltip()
 
     @property
     def pet_id(self) -> str:

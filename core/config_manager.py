@@ -1,5 +1,6 @@
 import copy
 import json
+import os
 from pathlib import Path
 
 DEFAULT_CONFIG = {
@@ -9,6 +10,7 @@ DEFAULT_CONFIG = {
             "character": "orange_cat",
             "duration_sec": 180,
             "message": "休息一下！",
+            "alarms": [],
             "position": {"x": -1, "y": -1},
         },
         {
@@ -16,6 +18,7 @@ DEFAULT_CONFIG = {
             "character": "snoopy",
             "duration_sec": 300,
             "message": "時間到！",
+            "alarms": [],
             "position": {"x": -1, "y": -1},
         },
         {
@@ -23,6 +26,7 @@ DEFAULT_CONFIG = {
             "character": "shiba",
             "duration_sec": 1500,
             "message": "番茄鐘結束！",
+            "alarms": [],
             "position": {"x": -1, "y": -1},
         },
     ],
@@ -55,6 +59,16 @@ class ConfigManager:
             self._data = copy.deepcopy(DEFAULT_CONFIG)
             self.save()
         self._migrate_legacy_characters()
+        self._migrate_alarms()
+
+    def _migrate_alarms(self):
+        changed = False
+        for pet in self._data.get("pets", []):
+            if "alarms" not in pet:
+                pet["alarms"] = []
+                changed = True
+        if changed:
+            self.save()
 
     def _migrate_legacy_characters(self):
         changed = False
@@ -68,8 +82,10 @@ class ConfigManager:
 
     def save(self):
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self._path, "w", encoding="utf-8") as f:
+        tmp = self._path.with_suffix(".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(self._data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, self._path)
 
     # --- Pet accessors ---
 
@@ -103,6 +119,25 @@ class ConfigManager:
     def set_pets(self, pets):
         self._data["pets"] = pets
         self.save()
+
+    # --- Alarm accessors ---
+
+    def get_pet_alarms(self, pet_id):
+        pet = self.get_pet(pet_id)
+        return pet.get("alarms", []) if pet else []
+
+    def set_pet_alarms(self, pet_id, alarms):
+        return self.update_pet(pet_id, {"alarms": alarms})
+
+    def disable_alarm(self, pet_id, alarm_index):
+        pet = self.get_pet(pet_id)
+        if pet and 0 <= alarm_index < len(pet.get("alarms", [])):
+            pet["alarms"][alarm_index]["enabled"] = False
+            self.save()
+            return True
+        return False
+
+    # --- Position ---
 
     def update_pet_position(self, pet_id, x, y):
         """Convenience method: update position for a single pet."""
