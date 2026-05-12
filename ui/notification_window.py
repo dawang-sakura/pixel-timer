@@ -2,6 +2,8 @@ from PySide6.QtWidgets import QWidget, QLabel, QApplication
 from PySide6.QtCore import Qt, QTimer, QPoint, Signal
 from PySide6.QtGui import QPainter, QColor, QFont, QPen, QPolygon
 
+from ui.dwm_utils import disable_dwm_frame
+
 
 # Character palette: (border_hex, fill_hex)
 _CHARACTER_COLORS = {
@@ -101,6 +103,10 @@ class NotificationWindow(QWidget):
         ])
         painter.setBrush(self._fill_color)
         painter.drawPolygon(triangle_fill)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        disable_dwm_frame(int(self.winId()))
 
     def closeEvent(self, event):
         self.dismissed.emit()
