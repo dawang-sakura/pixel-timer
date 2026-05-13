@@ -2,19 +2,25 @@ import re
 import uuid
 
 from PySide6.QtWidgets import (
-    QDialog, QTabWidget, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QDialog, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFormLayout, QCheckBox, QComboBox, QTableWidget, QTableWidgetItem,
-    QHeaderView, QMessageBox, QStyledItemDelegate, QFrame,
+    QHeaderView, QMessageBox, QStyledItemDelegate, QFrame, QStackedWidget,
+    QSpinBox,
 )
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont
+from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtGui import QPainter, QColor, QPen, QPixmap
 
 from core.constants import CHARACTER_OPTIONS, CHARACTER_DISPLAY_NAMES
+from ui.pixel_theme import (
+    pixel_font, BG_DEEP, BG_MID, BG_LIGHT,
+    BORDER_HI, BORDER_LO, TEXT, TEXT_DIM, CURSOR_CLR,
+)
 
 PET_COLUMNS = ["角色", "秒數", "訊息"]
 ALARM_COLUMNS = ["時間", "訊息", "重複", "啟用"]
 REPEAT_OPTIONS = [("once", "單次"), ("daily", "每天"), ("weekdays", "平日")]
 _CHAR_ID_ROLE = Qt.ItemDataRole.UserRole + 1
+_REPEAT_ID_ROLE = Qt.ItemDataRole.UserRole + 2
 
 
 def _validate_time(t):
@@ -24,6 +30,204 @@ def _validate_time(t):
     h, mi = int(m.group(1)), int(m.group(2))
     return 0 <= h <= 23 and 0 <= mi <= 59
 
+
+# ── RPG Tab Bar ──────────────────────────────────────────────────────────
+
+class PixelTabBar(QWidget):
+    tab_changed = Signal(int)
+
+    def __init__(self, labels, parent=None):
+        super().__init__(parent)
+        self._labels = labels
+        self._current = 0
+        self._tab_rects = []
+        self._font = pixel_font(14, bold=True)
+        self.setFixedHeight(36)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+
+        painter.setFont(self._font)
+        fm = painter.fontMetrics()
+
+        self._tab_rects = []
+        x = 16
+        cursor_text = "▶ "
+        cursor_w = fm.horizontalAdvance(cursor_text)
+
+        for i, label in enumerate(self._labels):
+            text_w = fm.horizontalAdvance(label)
+            total_w = cursor_w + text_w
+
+            if i == self._current:
+                painter.setPen(QColor(CURSOR_CLR))
+                painter.drawText(
+                    x, 0, cursor_w, self.height(),
+                    Qt.AlignmentFlag.AlignVCenter, cursor_text,
+                )
+                painter.setPen(QColor(TEXT))
+                painter.drawText(
+                    x + cursor_w, 0, text_w, self.height(),
+                    Qt.AlignmentFlag.AlignVCenter, label,
+                )
+            else:
+                painter.setPen(QColor(TEXT_DIM))
+                painter.drawText(
+                    x + cursor_w, 0, text_w, self.height(),
+                    Qt.AlignmentFlag.AlignVCenter, label,
+                )
+
+            self._tab_rects.append((x, total_w))
+            x += total_w + 32
+
+    def mousePressEvent(self, event):
+        click_x = event.pos().x()
+        for i, (rx, rw) in enumerate(self._tab_rects):
+            if rx <= click_x <= rx + rw + 16:
+                if i != self._current:
+                    self._current = i
+                    self.tab_changed.emit(i)
+                    self.update()
+                return
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key.Key_Left, Qt.Key.Key_Up):
+            new = max(0, self._current - 1)
+        elif event.key() in (Qt.Key.Key_Right, Qt.Key.Key_Down):
+            new = min(len(self._labels) - 1, self._current + 1)
+        else:
+            super().keyPressEvent(event)
+            return
+        if new != self._current:
+            self._current = new
+            self.tab_changed.emit(new)
+            self.update()
+
+
+# ── Sprite Preview ───────────────────────────────────────────────────────
+
+class SpritePreview(QWidget):
+    def __init__(self, sprite_loader, parent=None):
+        super().__init__(parent)
+        self._loader = sprite_loader
+        self._pixmaps = []
+        self._frame = 0
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._next_frame)
+        self.setFixedSize(80, 80)
+
+    def set_character(self, character):
+        self._timer.stop()
+        self._pixmaps = []
+        for frame_idx in range(2):
+            pm = self._loader.load(character, "idle", frame_idx)
+            if pm and not pm.isNull():
+                self._pixmaps.append(pm)
+        self._frame = 0
+        if self._pixmaps:
+            self._timer.start(600)
+        self.update()
+
+    def clear(self):
+        self._timer.stop()
+        self._pixmaps = []
+        self.update()
+
+    def stop(self):
+        self._timer.stop()
+
+    def closeEvent(self, event):
+        self._timer.stop()
+        super().closeEvent(event)
+
+    def _next_frame(self):
+        if self._pixmaps:
+            self._frame = (self._frame + 1) % len(self._pixmaps)
+            self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+
+        painter.setPen(QPen(QColor(BORDER_LO), 2))
+        painter.setBrush(QColor(BG_MID))
+        painter.drawRect(1, 1, self.width() - 2, self.height() - 2)
+
+        if not self._pixmaps:
+            painter.setPen(QColor(TEXT_DIM))
+            painter.setFont(pixel_font(10))
+            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "預覽")
+            return
+
+        pm = self._pixmaps[self._frame]
+        scaled = pm.scaled(
+            64, 64,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.FastTransformation,
+        )
+        x = (self.width() - scaled.width()) // 2
+        y = (self.height() - scaled.height()) // 2
+        painter.drawPixmap(x, y, scaled)
+
+
+# ── Time Delegate (pixel spinner) ────────────────────────────────────────
+
+class TimeDelegate(QStyledItemDelegate):
+    def createEditor(self, parent, option, index):
+        widget = QWidget(parent)
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(2, 0, 2, 0)
+        layout.setSpacing(2)
+
+        hour_spin = QSpinBox()
+        hour_spin.setRange(0, 23)
+        hour_spin.setWrapping(True)
+        hour_spin.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hour_spin.setFont(pixel_font(12, mono=True))
+        hour_spin.setFixedWidth(52)
+
+        colon = QLabel(":")
+        colon.setFont(pixel_font(12, bold=True, mono=True))
+        colon.setFixedWidth(10)
+        colon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        min_spin = QSpinBox()
+        min_spin.setRange(0, 59)
+        min_spin.setWrapping(True)
+        min_spin.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        min_spin.setFont(pixel_font(12, mono=True))
+        min_spin.setFixedWidth(52)
+
+        layout.addWidget(hour_spin)
+        layout.addWidget(colon)
+        layout.addWidget(min_spin)
+
+        widget._hour = hour_spin
+        widget._min = min_spin
+        return widget
+
+    def setEditorData(self, editor, index):
+        time_str = index.data(Qt.ItemDataRole.EditRole) or "09:00"
+        try:
+            h, m = map(int, time_str.split(":"))
+        except (ValueError, AttributeError):
+            h, m = 9, 0
+        editor._hour.setValue(h)
+        editor._min.setValue(m)
+
+    def setModelData(self, editor, model, index):
+        h = editor._hour.value()
+        m = editor._min.value()
+        model.setData(index, f"{h:02d}:{m:02d}", Qt.ItemDataRole.EditRole)
+
+    def updateEditorGeometry(self, editor, option, index):
+        editor.setGeometry(option.rect)
+
+
+# ── Existing Delegates (preserved) ───────────────────────────────────────
 
 class CharacterDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
@@ -51,7 +255,7 @@ class RepeatDelegate(QStyledItemDelegate):
         return combo
 
     def setEditorData(self, editor, index):
-        repeat_id = index.data(_CHAR_ID_ROLE) or "daily"
+        repeat_id = index.data(_REPEAT_ID_ROLE) or "daily"
         idx = editor.findData(repeat_id)
         editor.setCurrentIndex(idx if idx >= 0 else 0)
 
@@ -59,52 +263,96 @@ class RepeatDelegate(QStyledItemDelegate):
         repeat_id = editor.currentData()
         repeat_display = dict(REPEAT_OPTIONS).get(repeat_id, repeat_id)
         model.setData(index, repeat_display, Qt.ItemDataRole.EditRole)
-        model.setData(index, repeat_id, _CHAR_ID_ROLE)
+        model.setData(index, repeat_id, _REPEAT_ID_ROLE)
 
+
+# ── Settings Window ──────────────────────────────────────────────────────
 
 class SettingsWindow(QDialog):
     settings_changed = Signal()
 
-    def __init__(self, config_manager, parent=None):
+    def __init__(self, config_manager, sprite_loader=None, parent=None):
         super().__init__(parent)
         self.config = config_manager
+        self._sprite_loader = sprite_loader
+        self._preview = None
+
+        self._displayed_alarm_row = None
 
         self.setWindowTitle("Pixel Timer 設定")
-        self.setMinimumSize(520, 400)
+        self.setMinimumSize(540, 480)
+        self.setWindowFlags(
+            self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint
+        )
 
         self._build_ui()
 
     def _build_ui(self):
-        root_layout = QVBoxLayout(self)
+        root = QVBoxLayout(self)
+        root.setContentsMargins(10, 10, 10, 10)
+        root.setSpacing(6)
 
-        self._tabs = QTabWidget()
-        self._tabs.addTab(self._build_pet_tab(), "桌寵")
-        self._tabs.addTab(self._build_general_tab(), "一般")
-        self._tabs.addTab(self._build_about_tab(), "關於")
-        root_layout.addWidget(self._tabs)
+        self._tab_bar = PixelTabBar(["桌寵", "一般", "關於"])
+        root.addWidget(self._tab_bar)
+
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet(f"color: {BORDER_LO};")
+        sep.setFixedHeight(2)
+        root.addWidget(sep)
+
+        self._stack = QStackedWidget()
+        self._stack.addWidget(self._build_pet_tab())
+        self._stack.addWidget(self._build_general_tab())
+        self._stack.addWidget(self._build_about_tab())
+        root.addWidget(self._stack)
+
+        self._tab_bar.tab_changed.connect(self._stack.setCurrentIndex)
 
         btn_row = QHBoxLayout()
         btn_row.addStretch()
-
         self.btn_save = QPushButton("儲存")
         self.btn_cancel = QPushButton("取消")
-
         btn_row.addWidget(self.btn_save)
         btn_row.addWidget(self.btn_cancel)
-
-        root_layout.addLayout(btn_row)
+        root.addLayout(btn_row)
 
         self.btn_cancel.clicked.connect(self.reject)
         self.btn_save.clicked.connect(self._on_save)
 
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        painter.fillRect(self.rect(), QColor(BG_DEEP))
+
+        painter.setPen(QPen(QColor(BORDER_HI), 3))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRect(2, 2, self.width() - 4, self.height() - 4)
+
+        painter.setPen(QPen(QColor(BORDER_LO), 1))
+        painter.drawRect(5, 5, self.width() - 10, self.height() - 10)
+
+    def closeEvent(self, event):
+        if self._preview:
+            self._preview.stop()
+        super().closeEvent(event)
+
+    # ── Pet Tab ──────────────────────────────────────────────────────────
+
     def _build_pet_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
+        layout.setSpacing(6)
 
         self.pet_table = QTableWidget(0, 3)
         self.pet_table.setHorizontalHeaderLabels(PET_COLUMNS)
-        self.pet_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.pet_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.pet_table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch
+        )
+        self.pet_table.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows
+        )
+        self.pet_table.setAlternatingRowColors(True)
 
         self._char_delegate = CharacterDelegate(self.pet_table)
         self.pet_table.setItemDelegateForColumn(0, self._char_delegate)
@@ -128,19 +376,33 @@ class SettingsWindow(QDialog):
 
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        separator.setStyleSheet(f"color: {BORDER_LO};")
+        separator.setFixedHeight(2)
         layout.addWidget(separator)
 
+        header_row = QHBoxLayout()
+        if self._sprite_loader:
+            self._preview = SpritePreview(self._sprite_loader)
+            header_row.addWidget(self._preview)
+
         self._alarm_pet_label = QLabel("鬧鐘設定（請選擇桌寵）")
-        alarm_label_font = QFont()
-        alarm_label_font.setBold(True)
-        self._alarm_pet_label.setFont(alarm_label_font)
-        layout.addWidget(self._alarm_pet_label)
+        self._alarm_pet_label.setFont(pixel_font(14, bold=True))
+        header_row.addWidget(self._alarm_pet_label, 1)
+        header_row.addStretch()
+        layout.addLayout(header_row)
 
         self._alarm_table = QTableWidget(0, 4)
         self._alarm_table.setHorizontalHeaderLabels(ALARM_COLUMNS)
-        self._alarm_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self._alarm_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._alarm_table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch
+        )
+        self._alarm_table.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows
+        )
+        self._alarm_table.setAlternatingRowColors(True)
+
+        self._time_delegate = TimeDelegate(self._alarm_table)
+        self._alarm_table.setItemDelegateForColumn(0, self._time_delegate)
 
         self._repeat_delegate = RepeatDelegate(self._alarm_table)
         self._alarm_table.setItemDelegateForColumn(2, self._repeat_delegate)
@@ -158,7 +420,6 @@ class SettingsWindow(QDialog):
         layout.addLayout(alarm_btn_layout)
 
         self.pet_table.itemSelectionChanged.connect(self._on_pet_selected)
-
         return tab
 
     def _add_pet_row(self, pet_data=None):
@@ -175,21 +436,30 @@ class SettingsWindow(QDialog):
             }
 
         char_id = pet_data.get("character", "orange_cat")
-        item_char = QTableWidgetItem(CHARACTER_DISPLAY_NAMES.get(char_id, char_id))
+        item_char = QTableWidgetItem(
+            CHARACTER_DISPLAY_NAMES.get(char_id, char_id)
+        )
         item_char.setData(Qt.ItemDataRole.UserRole, pet_data["id"])
         item_char.setData(_CHAR_ID_ROLE, char_id)
         self.pet_table.setItem(row, 0, item_char)
-        self.pet_table.setItem(row, 1, QTableWidgetItem(str(pet_data.get("duration_sec", 60))))
-        self.pet_table.setItem(row, 2, QTableWidgetItem(pet_data.get("message", "時間到！")))
+        self.pet_table.setItem(
+            row, 1, QTableWidgetItem(str(pet_data.get("duration_sec", 60)))
+        )
+        self.pet_table.setItem(
+            row, 2, QTableWidgetItem(pet_data.get("message", "時間到！"))
+        )
 
-    # --- Alarm table management ---
+    # ── Alarm table management ───────────────────────────────────────────
 
     def _on_pet_selected(self):
         self._sync_alarm_table_to_data()
         rows = self.pet_table.selectionModel().selectedRows()
         if not rows:
+            self._displayed_alarm_row = None
             self._alarm_pet_label.setText("鬧鐘設定（請選擇桌寵）")
             self._alarm_table.setRowCount(0)
+            if self._preview:
+                self._preview.clear()
             return
         row = rows[0].row()
         char_item = self.pet_table.item(row, 0)
@@ -197,6 +467,10 @@ class SettingsWindow(QDialog):
         char_name = CHARACTER_DISPLAY_NAMES.get(char_id, char_id)
         self._alarm_pet_label.setText(f"鬧鐘設定 — {char_name}")
         self._load_alarms_for_row(row)
+        self._displayed_alarm_row = row
+
+        if self._preview and char_id in CHARACTER_OPTIONS:
+            self._preview.set_character(char_id)
 
     def _load_alarms_for_row(self, row):
         self._alarm_table.setRowCount(0)
@@ -205,24 +479,35 @@ class SettingsWindow(QDialog):
 
     def _add_alarm_row(self, alarm_data=None):
         if alarm_data is None:
-            alarm_data = {"time": "09:00", "message": "鬧鐘！", "repeat": "daily", "enabled": True}
+            alarm_data = {
+                "time": "09:00", "message": "鬧鐘！",
+                "repeat": "daily", "enabled": True,
+            }
 
         row = self._alarm_table.rowCount()
         self._alarm_table.insertRow(row)
 
-        self._alarm_table.setItem(row, 0, QTableWidgetItem(alarm_data.get("time", "09:00")))
-        self._alarm_table.setItem(row, 1, QTableWidgetItem(alarm_data.get("message", "鬧鐘！")))
+        self._alarm_table.setItem(
+            row, 0, QTableWidgetItem(alarm_data.get("time", "09:00"))
+        )
+        self._alarm_table.setItem(
+            row, 1, QTableWidgetItem(alarm_data.get("message", "鬧鐘！"))
+        )
 
         repeat_id = alarm_data.get("repeat", "daily")
         repeat_display = dict(REPEAT_OPTIONS).get(repeat_id, repeat_id)
         repeat_item = QTableWidgetItem(repeat_display)
-        repeat_item.setData(_CHAR_ID_ROLE, repeat_id)
+        repeat_item.setData(_REPEAT_ID_ROLE, repeat_id)
         self._alarm_table.setItem(row, 2, repeat_item)
 
         chk_item = QTableWidgetItem()
-        chk_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+        chk_item.setFlags(
+            Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled
+        )
         chk_item.setCheckState(
-            Qt.CheckState.Checked if alarm_data.get("enabled", True) else Qt.CheckState.Unchecked
+            Qt.CheckState.Checked
+            if alarm_data.get("enabled", True)
+            else Qt.CheckState.Unchecked
         )
         self._alarm_table.setItem(row, 3, chk_item)
 
@@ -235,19 +520,18 @@ class SettingsWindow(QDialog):
         self._add_alarm_row()
 
     def _on_delete_alarm(self):
-        self._sync_alarm_table_to_data()
         alarm_rows = sorted(
             set(idx.row() for idx in self._alarm_table.selectedIndexes()),
             reverse=True,
         )
         for row in alarm_rows:
             self._alarm_table.removeRow(row)
+        self._sync_alarm_table_to_data()
 
     def _sync_alarm_table_to_data(self):
-        rows = self.pet_table.selectionModel().selectedRows()
-        if not rows:
+        if self._displayed_alarm_row is None:
             return
-        pet_row = rows[0].row()
+        pet_row = self._displayed_alarm_row
         alarms = []
         for r in range(self._alarm_table.rowCount()):
             time_item = self._alarm_table.item(r, 0)
@@ -257,12 +541,17 @@ class SettingsWindow(QDialog):
             alarms.append({
                 "time": time_item.text().strip() if time_item else "09:00",
                 "message": msg_item.text().strip() if msg_item else "鬧鐘！",
-                "repeat": (repeat_item.data(_CHAR_ID_ROLE) if repeat_item else None) or "daily",
-                "enabled": enabled_item.checkState() == Qt.CheckState.Checked if enabled_item else True,
+                "repeat": (
+                    repeat_item.data(_REPEAT_ID_ROLE) if repeat_item else None
+                ) or "daily",
+                "enabled": (
+                    enabled_item.checkState() == Qt.CheckState.Checked
+                    if enabled_item else True
+                ),
             })
         self._alarms_by_row[pet_row] = alarms
 
-    # --- Pet table management ---
+    # ── Pet table management ─────────────────────────────────────────────
 
     def _on_add_pet(self):
         self._sync_alarm_table_to_data()
@@ -274,6 +563,7 @@ class SettingsWindow(QDialog):
 
     def _on_delete_pet(self):
         self._sync_alarm_table_to_data()
+        self._displayed_alarm_row = None
         rows = sorted(
             set(idx.row() for idx in self.pet_table.selectedIndexes()),
             reverse=True,
@@ -287,45 +577,52 @@ class SettingsWindow(QDialog):
             self._alarms_by_row[new_idx] = old_data[old_idx]
         self._on_pet_selected()
 
+    # ── General Tab ──────────────────────────────────────────────────────
+
     def _build_general_tab(self):
         tab = QWidget()
         layout = QFormLayout(tab)
 
         glob = self.config.get_global()
-
         self.chk_sound = QCheckBox()
         self.chk_sound.setChecked(glob.get("sound_enabled", True))
         layout.addRow("啟用音效", self.chk_sound)
 
         return tab
 
+    # ── About Tab ────────────────────────────────────────────────────────
+
     def _build_about_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        title_label = QLabel("Pixel Timer")
-        title_font = QFont()
-        title_font.setBold(True)
-        title_font.setPointSize(20)
-        title_label.setFont(title_font)
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title = QLabel("Pixel Timer")
+        title.setFont(pixel_font(24, bold=True))
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        version_label = QLabel("版本 3.0.0")
-        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        version = QLabel("版本 3.0.0")
+        version.setFont(pixel_font(12))
+        version.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        desc_label = QLabel(
+        desc = QLabel(
             "Windows 像素風計時提醒器\n"
             "桌寵常駐工具列旁，雙擊啟動倒數計時\n"
             "時間到桌寵播放動畫並彈出 RPG 對話氣泡"
         )
-        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc.setFont(pixel_font(11))
+        desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc.setStyleSheet(f"color: {TEXT_DIM};")
 
-        layout.addWidget(title_label)
-        layout.addWidget(version_label)
-        layout.addWidget(desc_label)
+        layout.addWidget(title)
+        layout.addSpacing(8)
+        layout.addWidget(version)
+        layout.addSpacing(16)
+        layout.addWidget(desc)
 
         return tab
+
+    # ── Save ─────────────────────────────────────────────────────────────
 
     def _on_save(self):
         self._sync_alarm_table_to_data()
@@ -335,10 +632,14 @@ class SettingsWindow(QDialog):
             dur_item = self.pet_table.item(row, 1)
             msg_item = self.pet_table.item(row, 2)
 
-            char = (char_item.data(_CHAR_ID_ROLE) if char_item else None) or "orange_cat"
-            dur_text = (dur_item.text().strip() if dur_item else "60")
-            msg = (msg_item.text().strip() if msg_item else "時間到！")
-            pet_id = char_item.data(Qt.ItemDataRole.UserRole) if char_item else None
+            char = (
+                char_item.data(_CHAR_ID_ROLE) if char_item else None
+            ) or "orange_cat"
+            dur_text = dur_item.text().strip() if dur_item else "60"
+            msg = msg_item.text().strip() if msg_item else "時間到！"
+            pet_id = (
+                char_item.data(Qt.ItemDataRole.UserRole) if char_item else None
+            )
 
             if not pet_id:
                 pet_id = f"pet_{uuid.uuid4().hex[:8]}"
@@ -348,7 +649,9 @@ class SettingsWindow(QDialog):
                 if dur <= 0:
                     raise ValueError
             except ValueError:
-                QMessageBox.warning(self, "錯誤", f"第 {row + 1} 行：秒數必須是正整數")
+                QMessageBox.warning(
+                    self, "錯誤", f"第 {row + 1} 行：秒數必須是正整數"
+                )
                 return
 
             if not msg:
@@ -369,7 +672,10 @@ class SettingsWindow(QDialog):
                 alarm["time"] = f"{h:02d}:{m:02d}"
 
             existing = self.config.get_pet(pet_id)
-            existing_position = existing.get("position", {"x": -1, "y": -1}) if existing else {"x": -1, "y": -1}
+            existing_pos = (
+                existing.get("position", {"x": -1, "y": -1})
+                if existing else {"x": -1, "y": -1}
+            )
 
             pets.append({
                 "id": pet_id,
@@ -377,7 +683,7 @@ class SettingsWindow(QDialog):
                 "duration_sec": dur,
                 "message": msg,
                 "alarms": row_alarms,
-                "position": existing_position,
+                "position": existing_pos,
             })
 
         self.config.set_pets(pets)

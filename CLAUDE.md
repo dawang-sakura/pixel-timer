@@ -24,7 +24,9 @@ pixel_timer/
   sprites/animation.py        # 動畫狀態機（idle/counting/finished）
   sprites/generate_sprites.py # Pillow 素材生成腳本
   ui/dwm_utils.py             # Win32 DWM 邊框修復（disable_dwm_frame）
+  ui/pixel_theme.py           # 暗色 RPG 主題（色彩常數 + 字體載入 + QPalette + QSS）
   sprites/assets/             # 像素素材（8 角色 × 3 state × 2 frame = 48 PNG）
+  assets/fonts/               # Ark Pixel 12px TTF（proportional + monospaced, zh_tw）
   config/settings.json        # 使用者設定（gitignore）
 ```
 
@@ -37,7 +39,7 @@ pixel_timer/
 - Phase 4.1: Snoopy outline-first 重繪 + 動畫行為調整 + 死碼清理 ✅
 - Phase 4.2: Snoopy BRIK 像素圖案直抄 + 42×40 尺寸對齊 ✅
 - Phase 5: Cron 鬧鐘功能（每隻桌寵定時自動提醒 + 設定 GUI）✅
-- Phase 6: GUI 像素風古早遊戲介面
+- Phase 6: GUI 像素風古早遊戲介面（RPG暗色主題 + 像素字體 + 打字機通知） ✅
 - Phase 7: PyInstaller 打包
 
 ## 開發指令

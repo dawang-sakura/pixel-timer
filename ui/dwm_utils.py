@@ -21,6 +21,9 @@ def disable_dwm_frame(hwnd: int):
         (_DWMWA_SYSTEMBACKDROP_TYPE, ctypes.c_int, _DWMSBT_NONE),
     ]:
         v = val_type(val)
-        _dwmapi.DwmSetWindowAttribute(
-            hwnd, attr, ctypes.byref(v), ctypes.sizeof(v)
-        )
+        try:
+            _dwmapi.DwmSetWindowAttribute(
+                hwnd, attr, ctypes.byref(v), ctypes.sizeof(v)
+            )
+        except OSError:
+            pass

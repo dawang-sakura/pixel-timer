@@ -247,7 +247,7 @@ class TrayApp(QSystemTrayIcon):
             self._settings_win.raise_()
             self._settings_win.activateWindow()
             return
-        self._settings_win = SettingsWindow(self.config)
+        self._settings_win = SettingsWindow(self.config, self._sprite_loader)
         self._settings_win.settings_changed.connect(self._on_settings_changed)
         self._settings_win.show()
 
