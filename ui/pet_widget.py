@@ -89,10 +89,16 @@ class PetWidget(QWidget):
             self._label.setPixmap(initial)
 
         pos = pet_config.get("position", {"x": -1, "y": -1})
-        if pos.get("x", -1) == -1 or pos.get("y", -1) == -1:
+        px, py = pos.get("x", -1), pos.get("y", -1)
+        if px == -1 or py == -1:
             self._auto_place()
         else:
-            self.move(pos["x"], pos["y"])
+            screen = QApplication.primaryScreen()
+            geom = screen.availableGeometry()
+            if geom.contains(px, py):
+                self.move(px, py)
+            else:
+                self._auto_place()
 
         self._update_idle_tooltip()
 
