@@ -44,12 +44,12 @@ pixel_timer/
 
 ## 開發指令
 ```bash
-# 還原 .venv（重開機後或首次 clone）
-python -m venv .venv
-.venv/Scripts/pip install -r requirements.txt
+# 還原 venv（重開機後或首次 clone）— 放在 ~/.venvs/ 避免污染專案目錄
+python -m venv ~/.venvs/pixel_timer
+~/.venvs/pixel_timer/Scripts/pip install -r requirements.txt
 
 # 啟動
-.venv/Scripts/python main.py
+~/.venvs/pixel_timer/Scripts/python main.py
 ```
 
 ## 架構重點

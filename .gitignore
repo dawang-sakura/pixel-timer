@@ -8,3 +8,7 @@ build/
 *.spec
 *.egg-info/
 config/settings.json
+
+# TC skill scratch artifacts
+.tc_handoff.json
+.phase*.md
