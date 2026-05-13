@@ -3,19 +3,19 @@ from PySide6.QtCore import Qt, QTimer, QPoint, Signal
 from PySide6.QtGui import QPainter, QColor, QPen, QPolygon
 
 from ui.dwm_utils import disable_dwm_frame
-from ui.pixel_theme import pixel_font, BG_DEEP, BORDER_HI, BORDER_LO, TEXT
+from ui.pixel_theme import pixel_font, BG_MID, TEXT
 
 _CHARACTER_ACCENT = {
     "orange_cat": "#E65100",
-    "white_cat":  "#78909C",
-    "calico":     "#5D4037",
-    "snoopy":     "#424242",
-    "shiba":      "#795548",
-    "goblin":     "#1B5E20",
-    "chick":      "#F9A825",
+    "white_cat":  "#90A4AE",
+    "calico":     "#6D4C41",
+    "snoopy":     "#616161",
+    "shiba":      "#8D6E63",
+    "goblin":     "#2E7D32",
+    "chick":      "#F57F17",
     "blue_eyes":  "#1565C0",
 }
-_DEFAULT_ACCENT = "#8888AA"
+_DEFAULT_ACCENT = "#C8A96E"
 _TRIANGLE_H = 10
 
 
@@ -37,8 +37,8 @@ class NotificationWindow(QWidget):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
-        width = 220
-        bubble_h = 80
+        width = 260
+        bubble_h = 100
         total_h = bubble_h + _TRIANGLE_H
         self.setFixedSize(width, total_h)
 
@@ -52,10 +52,10 @@ class NotificationWindow(QWidget):
         self.move(x, y)
 
         self._label = QLabel("", self)
-        self._label.setGeometry(10, 10, width - 20, bubble_h - 20)
+        self._label.setGeometry(12, 12, width - 24, bubble_h - 24)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setWordWrap(True)
-        self._label.setFont(pixel_font(10))
+        self._label.setFont(pixel_font(16))
         self._label.setStyleSheet(f"color: {TEXT}; background: transparent;")
 
         self._auto_close = QTimer(self)
@@ -83,15 +83,12 @@ class NotificationWindow(QWidget):
         bubble_h = self.height() - _TRIANGLE_H
 
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor(BG_DEEP))
+        painter.setBrush(QColor(BG_MID))
         painter.drawRect(3, 3, w - 6, bubble_h - 6)
 
-        painter.setPen(QPen(QColor(BORDER_HI), 3))
+        painter.setPen(QPen(self._accent, 3))
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawRect(2, 2, w - 4, bubble_h - 4)
-
-        painter.setPen(QPen(self._accent, 1))
-        painter.drawRect(6, 6, w - 12, bubble_h - 12)
 
         cx = w // 2
         triangle = QPolygon([
@@ -108,7 +105,7 @@ class NotificationWindow(QWidget):
             QPoint(cx + 5, bubble_h - 1),
             QPoint(cx, bubble_h + _TRIANGLE_H - 3),
         ])
-        painter.setBrush(QColor(BG_DEEP))
+        painter.setBrush(QColor(BG_MID))
         painter.drawPolygon(triangle_inner)
 
     def showEvent(self, event):
