@@ -23,6 +23,7 @@ pixel_timer/
   sprites/sprite_loader.py    # PNG 載入 + 快取
   sprites/animation.py        # 動畫狀態機（idle/counting/finished）
   sprites/generate_sprites.py # Pillow 素材生成腳本
+  ui/dwm_utils.py             # Win32 DWM 邊框修復（disable_dwm_frame）
   sprites/assets/             # 像素素材（8 角色 × 3 state × 2 frame = 48 PNG）
   config/settings.json        # 使用者設定（gitignore）
 ```
