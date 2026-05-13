@@ -151,7 +151,8 @@ class BubbleWidget(QWidget):
     # -- Paint --
 
     def paintEvent(self, event):
-        size = self._compute_size()
+        # I5: use self.size() not _compute_size()
+        size = self.size()
         shadow_extra = SHADOW_OFFSET if self._show_shadow else 0
         tail_h = TAIL_HEIGHT if self._tail_side != "none" else 0
 
@@ -160,59 +161,64 @@ class BubbleWidget(QWidget):
 
         tail_cx = int(body_w * self._tail_offset_ratio)
         tail_cx = max(TAIL_WIDTH // 2 + 4, min(body_w - TAIL_WIDTH // 2 - 4, tail_cx))
+        # I2: for top-tail body is offset down by tail_h so tail rows hit y=0..th-1
+        bx = 0
+        by = tail_h if self._tail_side == "top" else 0
+
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        if self._show_shadow:
+        try:  # I3: try/finally guarantees painter.end() even on _draw_* exception
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+            if self._show_shadow:
+                if self._tail_side == "bottom":
+                    painter.fillRect(SHADOW_OFFSET, SHADOW_OFFSET, body_w, body_h + tail_h, SHADOW_COLOR)
+                else:
+                    painter.fillRect(SHADOW_OFFSET, SHADOW_OFFSET, body_w, body_h, SHADOW_COLOR)
+            painter.fillRect(bx, by, body_w, body_h, QColor(TEXT))
+            painter.fillRect(bx + OUTER_BORDER_W, by + OUTER_BORDER_W, body_w - 2 * OUTER_BORDER_W, body_h - 2 * OUTER_BORDER_W, self._accent)
+            inset = OUTER_BORDER_W + MID_BORDER_W
+            painter.fillRect(bx + inset, by + inset, body_w - 2 * inset, body_h - 2 * inset, QColor(BG_MID))
+            for cx_, cy_ in [(bx, by), (bx + body_w - CORNER_BITE, by), (bx, by + body_h - CORNER_BITE), (bx + body_w - CORNER_BITE, by + body_h - CORNER_BITE)]:
+                painter.fillRect(cx_, cy_, CORNER_BITE, CORNER_BITE, SHADOW_COLOR)
+            highlight = QColor(BG_LIGHT)
+            painter.fillRect(bx + inset, by + inset, body_w - 2 * inset, 1, highlight)
+            painter.fillRect(bx + inset, by + inset, 1, body_h - 2 * inset, highlight)
             if self._tail_side == "bottom":
-                painter.fillRect(SHADOW_OFFSET, SHADOW_OFFSET, body_w, body_h + tail_h, SHADOW_COLOR)
-            else:
-                painter.fillRect(SHADOW_OFFSET, SHADOW_OFFSET, body_w, body_h, SHADOW_COLOR)
-        bx, by = 0, 0
-        painter.fillRect(bx, by, body_w, body_h, QColor(TEXT))
-        painter.fillRect(bx + OUTER_BORDER_W, by + OUTER_BORDER_W, body_w - 2 * OUTER_BORDER_W, body_h - 2 * OUTER_BORDER_W, self._accent)
-        inset = OUTER_BORDER_W + MID_BORDER_W
-        painter.fillRect(bx + inset, by + inset, body_w - 2 * inset, body_h - 2 * inset, QColor(BG_MID))
-        for cx_, cy_ in [(bx, by), (bx + body_w - CORNER_BITE, by), (bx, by + body_h - CORNER_BITE), (bx + body_w - CORNER_BITE, by + body_h - CORNER_BITE)]:
-            painter.fillRect(cx_, cy_, CORNER_BITE, CORNER_BITE, SHADOW_COLOR)
-        highlight = QColor(BG_LIGHT)
-        painter.fillRect(bx + inset, by + inset, body_w - 2 * inset, 1, highlight)
-        painter.fillRect(bx + inset, by + inset, 1, body_h - 2 * inset, highlight)
-        if self._tail_side == "bottom":
-            self._draw_tail_bottom(painter, bx, by, body_w, body_h, tail_cx)
-        elif self._tail_side == "top":
-            self._draw_tail_top(painter, bx, by, body_w, tail_cx)
-        self._draw_text(painter, bx, by, body_w, body_h)
-        painter.end()
+                self._draw_tail_bottom(painter, bx, by, body_w, body_h, tail_cx)
+            elif self._tail_side == "top":
+                self._draw_tail_top(painter, bx, by, body_w, tail_cx)
+            self._draw_text(painter, bx, by, body_w, body_h)
+        finally:
+            painter.end()
     def _draw_tail_bottom(self, painter, bx, by, body_w, body_h, tail_cx):
-        th = TAIL_HEIGHT; tw = TAIL_WIDTH
+        th = TAIL_HEIGHT
         for i in range(th):
-            half = max((tw // 2) - i, 0)
+            half = max((TAIL_WIDTH // 2) - i, 0)
             x0 = bx + tail_cx - half; x1 = bx + tail_cx + half
             painter.fillRect(x0, by + body_h + i, x1 - x0, 1, QColor(TEXT))
         for i in range(th - 1):
-            half = max((tw // 2 - 1) - i, 0)
+            half = max((TAIL_WIDTH // 2 - 1) - i, 0)
             x0 = bx + tail_cx - half; x1 = bx + tail_cx + half
             if x1 > x0:
                 painter.fillRect(x0, by + body_h + i, x1 - x0, 1, self._accent)
         for i in range(th - 2):
-            half = max((tw // 2 - 2) - i, 0)
+            half = max((TAIL_WIDTH // 2 - 2) - i, 0)
             x0 = bx + tail_cx - half; x1 = bx + tail_cx + half
             if x1 > x0:
                 painter.fillRect(x0, by + body_h + i, x1 - x0, 1, QColor(BG_MID))
 
     def _draw_tail_top(self, painter, bx, by, body_w, tail_cx):
-        th = TAIL_HEIGHT; tw = TAIL_WIDTH
+        th = TAIL_HEIGHT
         for i in range(th):
-            row = th - 1 - i; half = max((tw // 2) - i, 0)
+            row = th - 1 - i; half = max((TAIL_WIDTH // 2) - i, 0)
             x0 = bx + tail_cx - half; x1 = bx + tail_cx + half
             painter.fillRect(x0, by - th + row, x1 - x0, 1, QColor(TEXT))
         for i in range(th - 1):
-            row = th - 1 - i; half = max((tw // 2 - 1) - i, 0)
+            row = th - 1 - i; half = max((TAIL_WIDTH // 2 - 1) - i, 0)
             x0 = bx + tail_cx - half; x1 = bx + tail_cx + half
             if x1 > x0:
                 painter.fillRect(x0, by - th + row, x1 - x0, 1, self._accent)
         for i in range(th - 2):
-            row = th - 1 - i; half = max((tw // 2 - 2) - i, 0)
+            row = th - 1 - i; half = max((TAIL_WIDTH // 2 - 2) - i, 0)
             x0 = bx + tail_cx - half; x1 = bx + tail_cx + half
             if x1 > x0:
                 painter.fillRect(x0, by - th + row, x1 - x0, 1, QColor(BG_MID))
@@ -224,17 +230,19 @@ class BubbleWidget(QWidget):
         text_w = body_w - 2 * (inset + self._padding)
         text_h = body_h - 2 * (inset + self._padding)
         displayed = self.current_displayed_text()
+        # N2: cache pixel_font() -- used up to 3x
+        font = pixel_font(self._font_size)
         if not displayed:
             if self._show_placeholder:
                 painter.setPen(QColor(TEXT_DIM))
-                painter.setFont(pixel_font(self._font_size))
+                painter.setFont(font)
                 painter.drawText(
                     text_x, text_y, text_w, text_h,
                     Qt.AlignmentFlag.AlignCenter | Qt.TextFlag.TextWordWrap,
                     "...",
                 )
             return
-        fm = QFontMetrics(pixel_font(self._font_size))
+        fm = QFontMetrics(font)
         line_h = fm.height()
         max_h = line_h * _MAX_LINES
         if fm.boundingRect(0, 0, text_w, 0, Qt.AlignmentFlag.AlignCenter | Qt.TextFlag.TextWordWrap, displayed).height() > max_h:
@@ -248,7 +256,7 @@ class BubbleWidget(QWidget):
             else:
                 displayed = "..."
         painter.setPen(QColor(TEXT))
-        painter.setFont(pixel_font(self._font_size))
+        painter.setFont(font)
         painter.drawText(
             text_x, text_y, text_w, text_h,
             Qt.AlignmentFlag.AlignCenter | Qt.TextFlag.TextWordWrap,

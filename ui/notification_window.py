@@ -26,7 +26,7 @@ class NotificationWindow(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         self._bubble = BubbleWidget(
-            message="",
+            message=message,
             character=character,
             font_size=16,
             padding=14,
@@ -48,7 +48,7 @@ class NotificationWindow(QWidget):
         body_w = hint.width() - SHADOW_OFFSET
         tail_cx = int(body_w * 0.5)
         tail_tip_x = tail_cx
-        tail_tip_y = hint.height() - SHADOW_OFFSET
+        tail_tip_y = hint.height() - SHADOW_OFFSET - 1
         x = position.x() - tail_tip_x
         y = position.y() - tail_tip_y - 4
         screen = QApplication.primaryScreen()
@@ -65,7 +65,12 @@ class NotificationWindow(QWidget):
         self._tw_timer = QTimer(self)
         self._tw_timer.timeout.connect(self._typewriter_tick)
         interval = 30 if len(message) > 30 else 40
-        self._tw_timer.start(interval)
+        # N3: guard empty message -- skip typewriter, go straight to auto-close
+        if len(message) > 0:
+            self._tw_timer.start(interval)
+        else:
+            self._typewriter_done = True
+            self._auto_close.start(5000)
 
     def _typewriter_tick(self):
         self._char_index += 1

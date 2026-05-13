@@ -189,7 +189,7 @@ class TimeDelegate(QStyledItemDelegate):
         layout.setContentsMargins(2, 0, 2, 0)
         layout.setSpacing(2)
 
-        hour_spin = QSpinBox()
+        hour_spin = QSpinBox(parent=widget)
         hour_spin.setRange(0, 23)
         hour_spin.setWrapping(True)
         hour_spin.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -201,7 +201,7 @@ class TimeDelegate(QStyledItemDelegate):
         colon.setFixedWidth(10)
         colon.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        min_spin = QSpinBox()
+        min_spin = QSpinBox(parent=widget)
         min_spin.setRange(0, 59)
         min_spin.setWrapping(True)
         min_spin.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -286,6 +286,8 @@ class SettingsWindow(QDialog):
 
         self._displayed_alarm_row = None
         self._populating = False
+        self._checker_cache = None  # N1: cached checkerboard QPixmap
+        self._checker_size = None
 
         self.setWindowTitle("Pixel Timer 設定")
         self.setMinimumSize(540, 480)
@@ -326,11 +328,20 @@ class SettingsWindow(QDialog):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
 
         w, h = self.width(), self.height()
-        c1 = QColor(BG_DEEP)
-        c2 = QColor("#E8961E")
-        for ty in range(0, h, 8):
-            for tx in range(0, w, 8):
-                painter.fillRect(tx, ty, 8, 8, c1 if (tx // 8 + ty // 8) % 2 == 0 else c2)
+        # N1: build/cache checkerboard as QPixmap; only rebuild on resize
+        if self._checker_cache is None or self._checker_size != (w, h):
+            self._checker_size = (w, h)
+            pm = QPixmap(w, h)
+            c1 = QColor(BG_DEEP)
+            c2 = QColor("#E8961E")
+            tile_p = QPainter(pm)
+            tile_p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+            for ty in range(0, h, 8):
+                for tx in range(0, w, 8):
+                    tile_p.fillRect(tx, ty, 8, 8, c1 if (tx // 8 + ty // 8) % 2 == 0 else c2)
+            tile_p.end()
+            self._checker_cache = pm
+        painter.drawPixmap(0, 0, self._checker_cache)
 
         inset = 12
         fw = w - inset * 2
