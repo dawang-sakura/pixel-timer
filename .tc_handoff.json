@@ -1,1 +1,20 @@
-﻿{"status":"complete","phase":"UI Redesign - Dark RPG to Bright Warm Retro","files_modified":["ui/pixel_theme.py","ui/notification_window.py","ui/settings_window.py"],"notes":["BG_DEEP constant name kept, value changed to warm orange #F5A623","Notification bubble fills changed from BG_DEEP to BG_MID (cream)","settings_window.py colors auto-update from pixel_theme constants","16px font files loaded from assets/fonts/"]}
+{
+  "phase": "6.4-A",
+  "phase_name": "Phase 6.4 Batch A — 氣泡+預覽重設計",
+  "started_at": "2026-05-13T23:10:00",
+  "agents": [
+    {
+      "role": "規劃",
+      "agent": "planner",
+      "status": "done",
+      "summary": "BubbleWidget API + refactor 順序定案，含風險表；_CHARACTER_ACCENT 移至 bubble_widget 解循環依賴"
+    },
+    {
+      "role": "執行",
+      "agent": "code-architect",
+      "status": "done",
+      "summary": "BubbleWidget 完成 + notification/settings 接線；bubble_widget.py 建立、notification_window.py 重構、settings_window.py 移除 BubblePreview 改用 BubbleWidget、加 itemChanged handler 與 _populating 防衝；commit 完成",
+      "commit": "pending"
+    }
+  ]
+}

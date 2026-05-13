@@ -11,7 +11,7 @@ from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QPainter, QColor, QPen, QPixmap
 
 from core.constants import CHARACTER_OPTIONS, CHARACTER_DISPLAY_NAMES
-from ui.notification_window import _CHARACTER_ACCENT, _DEFAULT_ACCENT
+from ui.bubble_widget import BubbleWidget
 from ui.pixel_theme import (
     pixel_font, BG_DEEP, BG_MID, BG_LIGHT,
     BORDER_HI, BORDER_LO, TEXT, TEXT_DIM, CURSOR_CLR,
@@ -179,56 +179,6 @@ class SpritePreview(QWidget):
         painter.drawPixmap(x, y, scaled)
 
 
-# ── Bubble Preview ──────────────────────────────────────────────────────
-
-class BubblePreview(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._accent = QColor(_DEFAULT_ACCENT)
-        self._char_name = ""
-        self.setFixedSize(140, 80)
-
-    def set_character(self, character):
-        self._accent = QColor(_CHARACTER_ACCENT.get(character, _DEFAULT_ACCENT))
-        self._char_name = CHARACTER_DISPLAY_NAMES.get(character, character)
-        self.update()
-
-    def clear(self):
-        self._accent = QColor(_DEFAULT_ACCENT)
-        self._char_name = ""
-        self.update()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        w, h = self.width(), self.height()
-        tri_h = 8
-        bh = h - tri_h
-
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor(BG_MID))
-        painter.drawRect(3, 3, w - 6, bh - 6)
-
-        painter.setPen(QPen(self._accent, 3))
-        painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawRect(2, 2, w - 4, bh - 4)
-
-        cx = w // 3
-        from PySide6.QtCore import QPoint as _QP
-        from PySide6.QtGui import QPolygon as _Poly
-        tri = _Poly([_QP(cx - 6, bh), _QP(cx + 6, bh), _QP(cx, bh + tri_h)])
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(self._accent)
-        painter.drawPolygon(tri)
-        tri_in = _Poly([_QP(cx - 3, bh - 1), _QP(cx + 3, bh - 1), _QP(cx, bh + tri_h - 3)])
-        painter.setBrush(QColor(BG_MID))
-        painter.drawPolygon(tri_in)
-
-        if self._char_name:
-            painter.setPen(QColor(TEXT))
-            painter.setFont(pixel_font(14, bold=True))
-            painter.drawText(8, 8, w - 16, bh - 16, Qt.AlignmentFlag.AlignCenter, self._char_name)
-
 
 # ── Time Delegate (pixel spinner) ────────────────────────────────────────
 
@@ -335,6 +285,7 @@ class SettingsWindow(QDialog):
         self._preview = None
 
         self._displayed_alarm_row = None
+        self._populating = False
 
         self.setWindowTitle("Pixel Timer 設定")
         self.setMinimumSize(540, 480)
@@ -437,9 +388,11 @@ class SettingsWindow(QDialog):
         self.pet_table.setItemDelegateForColumn(0, self._char_delegate)
 
         self._alarms_by_row = {}
+        self._populating = True
         for row_idx, pet in enumerate(self.config.get_pets()):
             self._add_pet_row(pet)
             self._alarms_by_row[row_idx] = list(pet.get("alarms", []))
+        self._populating = False
 
         layout.addWidget(self.pet_table)
 
@@ -464,13 +417,15 @@ class SettingsWindow(QDialog):
             self._preview = SpritePreview(self._sprite_loader)
             header_row.addWidget(self._preview)
 
-        self._bubble_preview = BubblePreview()
+        self._bubble_preview = BubbleWidget(
+            message="", character="orange_cat",
+            font_size=14, padding=10,
+            max_width=200, min_width=140,
+            tail_side="bottom", tail_offset_ratio=0.25,
+            show_shadow=False,
+        )
+        self._bubble_preview.setMinimumHeight(70)
         header_row.addWidget(self._bubble_preview)
-
-        self._alarm_pet_label = QLabel("鬧鐘設定（請選擇桌寵）")
-        self._alarm_pet_label.setFont(pixel_font(18, bold=True))
-        header_row.addWidget(self._alarm_pet_label, 1)
-        header_row.addStretch()
         layout.addLayout(header_row)
 
         self._alarm_table = QTableWidget(0, 4)
@@ -511,11 +466,13 @@ class SettingsWindow(QDialog):
         layout.addLayout(alarm_btn_layout)
 
         self.pet_table.itemSelectionChanged.connect(self._on_pet_selected)
+        self.pet_table.itemChanged.connect(self._on_pet_item_changed)
         return tab
 
     def _add_pet_row(self, pet_data=None):
         row = self.pet_table.rowCount()
         self.pet_table.insertRow(row)
+        self._populating = True
 
         if pet_data is None:
             pet_data = {
@@ -543,6 +500,7 @@ class SettingsWindow(QDialog):
         item_msg.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self.pet_table.setItem(row, 2, item_msg)
 
+        self._populating = False
     # ── Alarm table management ───────────────────────────────────────────
 
     def _on_pet_selected(self):
@@ -550,23 +508,41 @@ class SettingsWindow(QDialog):
         rows = self.pet_table.selectionModel().selectedRows()
         if not rows:
             self._displayed_alarm_row = None
-            self._alarm_pet_label.setText("鬧鐘設定（請選擇桌寵）")
             self._alarm_table.setRowCount(0)
             if self._preview:
                 self._preview.clear()
-            self._bubble_preview.clear()
+            self._bubble_preview.set_message("")
+            self._bubble_preview.set_character("orange_cat")
             return
         row = rows[0].row()
         char_item = self.pet_table.item(row, 0)
-        char_id = char_item.data(_CHAR_ID_ROLE) if char_item else "?"
-        char_name = CHARACTER_DISPLAY_NAMES.get(char_id, char_id)
-        self._alarm_pet_label.setText(f"鬧鐘設定 — {char_name}")
+        char_id = char_item.data(_CHAR_ID_ROLE) if char_item else "orange_cat"
+        msg_item = self.pet_table.item(row, 2)
+        msg = msg_item.text().strip() if msg_item else ""
         self._load_alarms_for_row(row)
         self._displayed_alarm_row = row
 
         if self._preview and char_id in CHARACTER_OPTIONS:
             self._preview.set_character(char_id)
         self._bubble_preview.set_character(char_id)
+        self._bubble_preview.set_message(msg)
+
+    def _on_pet_item_changed(self, item):
+        if self._populating:
+            return
+        if item.column() == 0:
+            char_id = item.data(_CHAR_ID_ROLE) or "orange_cat"
+            if char_id in CHARACTER_OPTIONS:
+                if self._preview:
+                    self._preview.set_character(char_id)
+                self._bubble_preview.set_character(char_id)
+            return
+        if item.column() != 2:
+            return
+        rows = self.pet_table.selectionModel().selectedRows()
+        if not rows or rows[0].row() != item.row():
+            return
+        self._bubble_preview.set_message(item.text().strip())
 
     def _load_alarms_for_row(self, row):
         self._alarm_table.setRowCount(0)
