@@ -306,7 +306,7 @@ class SettingsWindow(QDialog):
 
         # V5: pixel title bar
         self._title_bar = PixelTitleBar("Pixel Timer 設定")
-        self._title_bar.close_requested.connect(self.close)
+        self._title_bar.close_requested.connect(self.reject)
         root.addWidget(self._title_bar)
 
         inner = QWidget()
@@ -357,7 +357,7 @@ class SettingsWindow(QDialog):
         painter.drawPixmap(0, 0, self._checker_cache)
 
         inset = 12
-        tb_h = self._title_bar.height() if hasattr(self, "_title_bar") else 0
+        tb_h = self._title_bar.height()
         inset_top = inset + tb_h
         fw = w - inset * 2
         fh = h - inset_top - inset
@@ -613,7 +613,7 @@ class SettingsWindow(QDialog):
         chk = QCheckBox()
         chk.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         chk.setChecked(alarm_data.get("enabled", True))
-        chk.stateChanged.connect(lambda s, r=row: self._sync_alarm_table_to_data())
+        chk.stateChanged.connect(lambda s: self._sync_alarm_table_to_data())
         cell_lay.addStretch()
         cell_lay.addWidget(chk)
         cell_lay.addStretch()

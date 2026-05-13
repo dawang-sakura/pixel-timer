@@ -45,10 +45,9 @@ CORNER_BITE    = 2
 _MAX_LINES     = 8
 
 
-def _darken(qcolor: QColor, factor: float = 0.55) -> QColor:
-    """Return a darker version of qcolor by scaling HSL lightness."""
-    h, s, l, _ = qcolor.getHslF()
-    return QColor.fromHslF(h, s, max(0.0, l * factor), 1.0)
+def _darken(qcolor: QColor) -> QColor:
+    """Return a darker version of qcolor (achromatic-safe)."""
+    return qcolor.darker(180)
 
 
 class BubbleWidget(QWidget):
@@ -191,10 +190,10 @@ class BubbleWidget(QWidget):
             # V2: corner studs (RPG window rivet aesthetic) -- after cream fill, before highlight
             if body_w >= 60:
                 for sx, sy in [
-                    (bx + 2,          by + 2),
-                    (bx + body_w - 4, by + 2),
-                    (bx + 2,          by + body_h - 4),
-                    (bx + body_w - 4, by + body_h - 4),
+                    (bx + 5,          by + 5),
+                    (bx + body_w - 7, by + 5),
+                    (bx + 5,          by + body_h - 7),
+                    (bx + body_w - 7, by + body_h - 7),
                 ]:
                     painter.fillRect(sx, sy, 2, 2, self._accent_dark)
             highlight = QColor(BG_LIGHT)

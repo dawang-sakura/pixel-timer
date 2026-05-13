@@ -6,7 +6,7 @@ Provides drag-to-move and a pixel X close button with hover/press states.
 
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, QRect, QPoint, Signal
-from PySide6.QtGui import QPainter, QColor, QPen
+from PySide6.QtGui import QPainter, QColor, QPen, QPixmap
 
 from ui.pixel_theme import pixel_font, BG_LIGHT, BORDER_HI, TEXT, BG_MID, CURSOR_CLR
 
@@ -16,9 +16,10 @@ _BAR_HEIGHT = 28
 class PixelTitleBar(QWidget):
     close_requested = Signal()
 
-    def __init__(self, title: str, parent=None):
+    def __init__(self, title: str, icon_pixmap: QPixmap | None = None, parent=None):
         super().__init__(parent)
         self._title = title
+        self._icon_pixmap = icon_pixmap
         self._drag_start: QPoint | None = None
         self._close_hover = False
         self._close_pressed = False
@@ -39,11 +40,16 @@ class PixelTitleBar(QWidget):
         # Bottom border 2px
         painter.fillRect(0, _BAR_HEIGHT - 2, w, 2, QColor(BORDER_HI))
 
-        # Title text
+        # Title icon (optional) + text
         font = pixel_font(14, bold=True)
         painter.setFont(font)
         painter.setPen(QColor(TEXT))
-        painter.drawText(12, 0, w - 12 - 24, _BAR_HEIGHT, Qt.AlignmentFlag.AlignVCenter, self._title)
+        if self._icon_pixmap is not None and not self._icon_pixmap.isNull():
+            painter.drawPixmap(8, 6, 16, 16, self._icon_pixmap)
+            title_x = 36
+        else:
+            title_x = 12
+        painter.drawText(title_x, 0, w - title_x - 24, _BAR_HEIGHT, Qt.AlignmentFlag.AlignVCenter, self._title)
 
         # X button region: 16x16 at (w-22, 6)
         x_x = w - 22
@@ -75,7 +81,7 @@ class PixelTitleBar(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            if self._close_rect.contains(event.pos()):
+            if self._close_rect.contains(event.position().toPoint()):
                 self._close_pressed = True
                 self.update()
                 return
@@ -84,17 +90,20 @@ class PixelTitleBar(QWidget):
 
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.MouseButton.LeftButton and self._drag_start is not None:
+            if self._close_hover:
+                self._close_hover = False
+                self.update()
             self.window().move(event.globalPosition().toPoint() - self._drag_start)
             return
         # Hover detection
         old_hover = self._close_hover
-        self._close_hover = self._close_rect.contains(event.pos())
+        self._close_hover = self._close_rect.contains(event.position().toPoint())
         if self._close_hover != old_hover:
             self.update()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            if self._close_pressed and self._close_rect.contains(event.pos()):
+            if self._close_pressed and self._close_rect.contains(event.position().toPoint()):
                 self._close_pressed = False
                 self.update()
                 self.close_requested.emit()
