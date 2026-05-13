@@ -30,10 +30,10 @@ _DEFAULT_ACCENT = "#C8A96E"
 
 # -- Layout constants --
 
-OUTER_BORDER_W = 2
+OUTER_BORDER_W = 1          # V1: 2 -> 1 (lighter outer ring)
 MID_BORDER_W   = 3
 INNER_BORDER_W = 1
-FRAME_TOTAL    = OUTER_BORDER_W + MID_BORDER_W + INNER_BORDER_W  # = 6
+FRAME_TOTAL    = OUTER_BORDER_W + MID_BORDER_W + INNER_BORDER_W  # = 5
 
 SHADOW_OFFSET  = 4
 SHADOW_COLOR   = QColor("#2A1A00")
@@ -43,6 +43,12 @@ TAIL_HEIGHT    = 10
 CORNER_BITE    = 2
 
 _MAX_LINES     = 8
+
+
+def _darken(qcolor: QColor, factor: float = 0.55) -> QColor:
+    """Return a darker version of qcolor by scaling HSL lightness."""
+    h, s, l, _ = qcolor.getHslF()
+    return QColor.fromHslF(h, s, max(0.0, l * factor), 1.0)
 
 
 class BubbleWidget(QWidget):
@@ -86,6 +92,7 @@ class BubbleWidget(QWidget):
         self._show_shadow       = show_shadow
         self._show_placeholder  = True
         self._accent            = QColor(_CHARACTER_ACCENT.get(character, _DEFAULT_ACCENT))
+        self._accent_dark       = _darken(self._accent)   # V1: cached darkened accent
 
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, False)
@@ -99,7 +106,8 @@ class BubbleWidget(QWidget):
         self.update()
 
     def set_character(self, character_id: str) -> None:
-        self._accent = QColor(_CHARACTER_ACCENT.get(character_id, _DEFAULT_ACCENT))
+        self._accent      = QColor(_CHARACTER_ACCENT.get(character_id, _DEFAULT_ACCENT))
+        self._accent_dark = _darken(self._accent)   # V1: keep dark cache in sync
         self.update()
 
     def set_typewriter_index(self, idx: int) -> None:
@@ -173,12 +181,22 @@ class BubbleWidget(QWidget):
                     painter.fillRect(SHADOW_OFFSET, SHADOW_OFFSET, body_w, body_h + tail_h, SHADOW_COLOR)
                 else:
                     painter.fillRect(SHADOW_OFFSET, SHADOW_OFFSET, body_w, body_h, SHADOW_COLOR)
-            painter.fillRect(bx, by, body_w, body_h, QColor(TEXT))
+            # V1: outer border uses _accent_dark instead of TEXT
+            painter.fillRect(bx, by, body_w, body_h, self._accent_dark)
             painter.fillRect(bx + OUTER_BORDER_W, by + OUTER_BORDER_W, body_w - 2 * OUTER_BORDER_W, body_h - 2 * OUTER_BORDER_W, self._accent)
             inset = OUTER_BORDER_W + MID_BORDER_W
             painter.fillRect(bx + inset, by + inset, body_w - 2 * inset, body_h - 2 * inset, QColor(BG_MID))
             for cx_, cy_ in [(bx, by), (bx + body_w - CORNER_BITE, by), (bx, by + body_h - CORNER_BITE), (bx + body_w - CORNER_BITE, by + body_h - CORNER_BITE)]:
                 painter.fillRect(cx_, cy_, CORNER_BITE, CORNER_BITE, SHADOW_COLOR)
+            # V2: corner studs (RPG window rivet aesthetic) -- after cream fill, before highlight
+            if body_w >= 60:
+                for sx, sy in [
+                    (bx + 2,          by + 2),
+                    (bx + body_w - 4, by + 2),
+                    (bx + 2,          by + body_h - 4),
+                    (bx + body_w - 4, by + body_h - 4),
+                ]:
+                    painter.fillRect(sx, sy, 2, 2, self._accent_dark)
             highlight = QColor(BG_LIGHT)
             painter.fillRect(bx + inset, by + inset, body_w - 2 * inset, 1, highlight)
             painter.fillRect(bx + inset, by + inset, 1, body_h - 2 * inset, highlight)
@@ -191,10 +209,16 @@ class BubbleWidget(QWidget):
             painter.end()
     def _draw_tail_bottom(self, painter, bx, by, body_w, body_h, tail_cx):
         th = TAIL_HEIGHT
+        # V2: cream bridge -- repaint body-bottom rows inside the tail opening
+        # so body cream is continuous into the tail (removes horizontal seam)
+        open_x0 = bx + tail_cx - (TAIL_WIDTH // 2)
+        open_x1 = bx + tail_cx + (TAIL_WIDTH // 2)
+        painter.fillRect(open_x0 + 1, by + body_h - FRAME_TOTAL, open_x1 - open_x0 - 2, FRAME_TOTAL, QColor(BG_MID))
+
         for i in range(th):
             half = max((TAIL_WIDTH // 2) - i, 0)
             x0 = bx + tail_cx - half; x1 = bx + tail_cx + half
-            painter.fillRect(x0, by + body_h + i, x1 - x0, 1, QColor(TEXT))
+            painter.fillRect(x0, by + body_h + i, x1 - x0, 1, self._accent_dark)
         for i in range(th - 1):
             half = max((TAIL_WIDTH // 2 - 1) - i, 0)
             x0 = bx + tail_cx - half; x1 = bx + tail_cx + half
@@ -211,7 +235,7 @@ class BubbleWidget(QWidget):
         for i in range(th):
             row = th - 1 - i; half = max((TAIL_WIDTH // 2) - i, 0)
             x0 = bx + tail_cx - half; x1 = bx + tail_cx + half
-            painter.fillRect(x0, by - th + row, x1 - x0, 1, QColor(TEXT))
+            painter.fillRect(x0, by - th + row, x1 - x0, 1, self._accent_dark)
         for i in range(th - 1):
             row = th - 1 - i; half = max((TAIL_WIDTH // 2 - 1) - i, 0)
             x0 = bx + tail_cx - half; x1 = bx + tail_cx + half

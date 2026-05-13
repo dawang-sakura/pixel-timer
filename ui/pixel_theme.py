@@ -202,6 +202,11 @@ QCheckBox::indicator:checked {{
     background-color: {CURSOR_CLR};
     border-color: {BORDER_HI};
 }}
+QTableWidget::item:focus {{ outline: 0; border: none; }}
+QTableView {{ outline: 0; }}
+QCheckBox {{ background: transparent; }}
+QCheckBox:focus {{ outline: 0; }}
+
 
 QScrollBar:vertical {{
     background: {BG_LIGHT};

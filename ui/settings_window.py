@@ -12,6 +12,8 @@ from PySide6.QtGui import QPainter, QColor, QPen, QPixmap
 
 from core.constants import CHARACTER_OPTIONS, CHARACTER_DISPLAY_NAMES
 from ui.bubble_widget import BubbleWidget
+from ui.title_bar import PixelTitleBar
+from ui.dwm_utils import disable_dwm_frame
 from ui.pixel_theme import (
     pixel_font, BG_DEEP, BG_MID, BG_LIGHT,
     BORDER_HI, BORDER_LO, TEXT, TEXT_DIM, CURSOR_CLR,
@@ -186,15 +188,15 @@ class TimeDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         widget = QWidget(parent)
         layout = QHBoxLayout(widget)
-        layout.setContentsMargins(2, 0, 2, 0)
-        layout.setSpacing(2)
+        layout.setContentsMargins(4, 0, 4, 0)
+        layout.setSpacing(4)
 
         hour_spin = QSpinBox(parent=widget)
         hour_spin.setRange(0, 23)
         hour_spin.setWrapping(True)
         hour_spin.setAlignment(Qt.AlignmentFlag.AlignCenter)
         hour_spin.setFont(pixel_font(16, mono=True))
-        hour_spin.setFixedWidth(52)
+        hour_spin.setFixedWidth(60)
 
         colon = QLabel(":")
         colon.setFont(pixel_font(16, bold=True, mono=True))
@@ -206,7 +208,7 @@ class TimeDelegate(QStyledItemDelegate):
         min_spin.setWrapping(True)
         min_spin.setAlignment(Qt.AlignmentFlag.AlignCenter)
         min_spin.setFont(pixel_font(16, mono=True))
-        min_spin.setFixedWidth(52)
+        min_spin.setFixedWidth(60)
 
         layout.addWidget(hour_spin)
         layout.addWidget(colon)
@@ -290,25 +292,35 @@ class SettingsWindow(QDialog):
         self._checker_size = None
 
         self.setWindowTitle("Pixel Timer 設定")
-        self.setMinimumSize(540, 480)
+        self.setFixedSize(560, 520)
         self.setWindowFlags(
-            self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint
+            Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint
         )
 
         self._build_ui()
 
     def _build_ui(self):
         root = QVBoxLayout(self)
-        root.setContentsMargins(20, 20, 20, 20)
-        root.setSpacing(6)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        # V5: pixel title bar
+        self._title_bar = PixelTitleBar("Pixel Timer 設定")
+        self._title_bar.close_requested.connect(self.close)
+        root.addWidget(self._title_bar)
+
+        inner = QWidget()
+        inner_lay = QVBoxLayout(inner)
+        inner_lay.setContentsMargins(20, 14, 20, 14)
+        inner_lay.setSpacing(6)
 
         self._tab_bar = PixelTabBar(["桌寵", "關於"])
-        root.addWidget(self._tab_bar)
+        inner_lay.addWidget(self._tab_bar)
 
         self._stack = QStackedWidget()
         self._stack.addWidget(self._build_pet_tab())
         self._stack.addWidget(self._build_about_tab())
-        root.addWidget(self._stack)
+        inner_lay.addWidget(self._stack)
 
         self._tab_bar.tab_changed.connect(self._stack.setCurrentIndex)
 
@@ -318,10 +330,11 @@ class SettingsWindow(QDialog):
         self.btn_cancel = QPushButton("取消")
         btn_row.addWidget(self.btn_save)
         btn_row.addWidget(self.btn_cancel)
-        root.addLayout(btn_row)
+        inner_lay.addLayout(btn_row)
 
         self.btn_cancel.clicked.connect(self.reject)
         self.btn_save.clicked.connect(self._on_save)
+        root.addWidget(inner)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -344,19 +357,25 @@ class SettingsWindow(QDialog):
         painter.drawPixmap(0, 0, self._checker_cache)
 
         inset = 12
+        tb_h = self._title_bar.height() if hasattr(self, "_title_bar") else 0
+        inset_top = inset + tb_h
         fw = w - inset * 2
-        fh = h - inset * 2
-        painter.fillRect(inset + 3, inset + 3, fw, fh, QColor("#2A1A00"))
+        fh = h - inset_top - inset
+        painter.fillRect(inset + 3, inset_top + 3, fw, fh, QColor("#2A1A00"))
 
         painter.setPen(QPen(QColor(BORDER_HI), 4))
         painter.setBrush(QColor(BG_MID))
-        painter.drawRect(inset, inset, fw, fh)
+        painter.drawRect(inset, inset_top, fw, fh)
 
         dot_color = QColor(BORDER_HI)
-        for dx, dy in [(inset + 8, inset + 8), (inset + fw - 12, inset + 8),
-                        (inset + 8, inset + fh - 12), (inset + fw - 12, inset + fh - 12)]:
+        for dx, dy in [(inset + 8, inset_top + 8), (inset + fw - 12, inset_top + 8),
+                        (inset + 8, inset_top + fh - 12), (inset + fw - 12, inset_top + fh - 12)]:
             painter.fillRect(dx, dy, 4, 4, dot_color)
             painter.fillRect(dx + 6, dy, 4, 4, dot_color)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        disable_dwm_frame(int(self.winId()))  # V5: suppress DWM frame
 
     def closeEvent(self, event):
         if self._preview:
@@ -446,7 +465,7 @@ class SettingsWindow(QDialog):
         alarm_header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         alarm_header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
         alarm_header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
-        self._alarm_table.setColumnWidth(0, 100)
+        self._alarm_table.setColumnWidth(0, 160)
         self._alarm_table.setColumnWidth(2, 80)
         self._alarm_table.setColumnWidth(3, 50)
         self._alarm_table.setSelectionBehavior(
@@ -585,17 +604,28 @@ class SettingsWindow(QDialog):
         repeat_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self._alarm_table.setItem(row, 2, repeat_item)
 
-        chk_item = QTableWidgetItem()
-        chk_item.setFlags(
-            Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled
-        )
-        chk_item.setCheckState(
-            Qt.CheckState.Checked
-            if alarm_data.get("enabled", True)
-            else Qt.CheckState.Unchecked
-        )
-        chk_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._alarm_table.setItem(row, 3, chk_item)
+        # V3: cellWidget for centered warm-themed checkbox (no focus rect)
+        cell_widget = QWidget()
+        cell_widget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        cell_lay = QHBoxLayout(cell_widget)
+        cell_lay.setContentsMargins(0, 0, 0, 0)
+        cell_lay.setSpacing(0)
+        chk = QCheckBox()
+        chk.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        chk.setChecked(alarm_data.get("enabled", True))
+        chk.stateChanged.connect(lambda s, r=row: self._sync_alarm_table_to_data())
+        cell_lay.addStretch()
+        cell_lay.addWidget(chk)
+        cell_lay.addStretch()
+        self._alarm_table.setCellWidget(row, 3, cell_widget)
+
+    def _get_alarm_enabled(self, row: int) -> bool:
+        # V3: read enabled state from cellWidget checkbox
+        w = self._alarm_table.cellWidget(row, 3)
+        if w is None:
+            return True
+        chk = w.findChild(QCheckBox)
+        return chk.isChecked() if chk else True
 
     def _on_add_alarm(self):
         rows = self.pet_table.selectionModel().selectedRows()
@@ -623,17 +653,13 @@ class SettingsWindow(QDialog):
             time_item = self._alarm_table.item(r, 0)
             msg_item = self._alarm_table.item(r, 1)
             repeat_item = self._alarm_table.item(r, 2)
-            enabled_item = self._alarm_table.item(r, 3)
             alarms.append({
                 "time": time_item.text().strip() if time_item else "09:00",
                 "message": msg_item.text().strip() if msg_item else "鬧鐘！",
                 "repeat": (
                     repeat_item.data(_REPEAT_ID_ROLE) if repeat_item else None
                 ) or "daily",
-                "enabled": (
-                    enabled_item.checkState() == Qt.CheckState.Checked
-                    if enabled_item else True
-                ),
+                "enabled": self._get_alarm_enabled(r),
             })
         self._alarms_by_row[pet_row] = alarms
 
