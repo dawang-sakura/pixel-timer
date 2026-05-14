@@ -216,9 +216,11 @@ class SettingsWindow(QDialog):
         # Pet card list -- takes equal share of vertical space
         self.pet_list = CardListView(selectable=True)
         self.pet_list.setMinimumHeight(192)  # 至少 3 張 PetCard (60+spacing 4 ×3 + margin)
-        layout.addWidget(self.pet_list, 1)
+        self.pet_list.setMaximumHeight(192)  # 超過 3 張就 scroll，不擠壓下方按鈕
+        layout.addWidget(self.pet_list)
         btn_layout = QHBoxLayout()
         btn_add = QPushButton("新增")
+        btn_add.setMinimumHeight(28)
         btn_add.clicked.connect(self._on_add_pet)
         btn_layout.addWidget(btn_add)
         btn_layout.addStretch()
@@ -236,14 +238,17 @@ class SettingsWindow(QDialog):
         # Alarm card list -- takes equal share of vertical space
         self.alarm_list = CardListView(selectable=False)
         self.alarm_list.setMinimumHeight(180)  # 至少 3 張 AlarmCard (56+spacing 4 ×3 + margin)
-        layout.addWidget(self.alarm_list, 1)
+        self.alarm_list.setMaximumHeight(180)
+        layout.addWidget(self.alarm_list)
         # Alarm add button -- directly below alarm_list
         alarm_btn_layout = QHBoxLayout()
         btn_add_alarm = QPushButton("新增鬧鐘")
+        btn_add_alarm.setMinimumHeight(28)
         btn_add_alarm.clicked.connect(self._on_add_alarm)
         alarm_btn_layout.addWidget(btn_add_alarm)
         alarm_btn_layout.addStretch()
         layout.addLayout(alarm_btn_layout)
+        layout.addStretch(1)  # 多餘空間放最底，不要撐 list 或按鈕
         self.pet_list.selection_changed.connect(self._on_pet_selected)
         return tab
 

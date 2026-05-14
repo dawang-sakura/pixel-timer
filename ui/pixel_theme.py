@@ -285,9 +285,6 @@ AlarmCard QComboBox:focus, AlarmCard QLineEdit:focus, AlarmCard QSpinBox:focus {
     border-color: #D4820A;
 }}
 
-/* CardListView container */
-CardListView {{
-    background-color: #FFF8E7;
-    border: 2px solid #C8A96E;
-}}
+/* CardListView container — transparent so settings checker shows through;
+   border set inline by widget code to avoid QSS conflict with viewport transparency */
 """

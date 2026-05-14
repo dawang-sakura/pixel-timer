@@ -42,8 +42,14 @@ class CardListView(QScrollArea):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
+        # Transparent background so the settings window's checker paintEvent shows through
+        self.setStyleSheet("CardListView { background: transparent; border: 2px solid #C8A96E; }")
+        self.viewport().setAutoFillBackground(False)
+
         # Inner container
         self._container = QWidget()
+        self._container.setAutoFillBackground(False)
+        self._container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
         self._layout = QVBoxLayout(self._container)
         self._layout.setSpacing(4)
         self._layout.setContentsMargins(2, 2, 2, 2)
