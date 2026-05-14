@@ -70,14 +70,16 @@ class PetCard(QWidget):
         # 2. Character combo (100px)
         self._char_combo = QComboBox()
         self._char_combo.setFixedWidth(100)
-        self._char_combo.setEditable(False)
         for cid in CHARACTER_OPTIONS:
             self._char_combo.addItem(CHARACTER_DISPLAY_NAMES.get(cid, cid), cid)
         # Select current character
         idx = self._char_combo.findData(char_id)
         self._char_combo.setCurrentIndex(idx if idx >= 0 else 0)
-        # B1: center displayed text
-        self._char_combo.setEditable(False)
+        # B1: center displayed text — editable+ReadOnly is the standard PySide trick
+        self._char_combo.setEditable(True)
+        self._char_combo.lineEdit().setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._char_combo.lineEdit().setReadOnly(True)
+        self._char_combo.lineEdit().setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self._char_combo)
 
         # 3. Duration spinbox (80px)

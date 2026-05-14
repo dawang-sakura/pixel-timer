@@ -111,6 +111,11 @@ class AlarmCard(QWidget):
         repeat_id = alarm_data.get("repeat", "daily")
         ridx = self._repeat_combo.findData(repeat_id)
         self._repeat_combo.setCurrentIndex(ridx if ridx >= 0 else 1)
+        # B1: center displayed text — editable+ReadOnly is the standard PySide trick
+        self._repeat_combo.setEditable(True)
+        self._repeat_combo.lineEdit().setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._repeat_combo.lineEdit().setReadOnly(True)
+        self._repeat_combo.lineEdit().setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout.addWidget(self._repeat_combo)
 
         # 4. Enabled checkbox (24px container)
