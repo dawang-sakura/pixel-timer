@@ -4,9 +4,9 @@ Cache key: (character, state, frame)
 Falls back to empty QPixmap if the file is missing.
 """
 
-from pathlib import Path
-
 from PySide6.QtGui import QPixmap
+
+from core.paths import SPRITES_DIR
 
 
 class SpriteLoader:
@@ -14,7 +14,7 @@ class SpriteLoader:
 
     def __init__(self):
         self._cache: dict[tuple, QPixmap] = {}
-        self._base_path = Path(__file__).parent / "assets"
+        self._base_path = SPRITES_DIR
 
     def load(self, character: str, state: str, frame: int) -> QPixmap:
         """Load sprite. Returns empty QPixmap if file missing."""

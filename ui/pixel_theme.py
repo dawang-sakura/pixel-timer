@@ -1,10 +1,8 @@
-from pathlib import Path
-
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont, QFontDatabase, QPalette
 from PySide6.QtWidgets import QApplication
 
-_FONTS_DIR = Path(__file__).parent.parent / "assets" / "fonts"
+from core.paths import FONTS_DIR
 
 BG_DEEP = "#F5A623"      # Warm orange — window frame background
 BG_MID = "#FFF8E7"       # Cream — content area / inputs
@@ -32,7 +30,7 @@ def _load_fonts():
         ("ark-pixel-12px-proportional-zh_tw.ttf", "_font_prop"),
         ("ark-pixel-12px-monospaced-zh_tw.ttf", "_font_mono"),
     ]:
-        path = _FONTS_DIR / filename
+        path = FONTS_DIR / filename
         if not path.exists():
             continue
         fid = QFontDatabase.addApplicationFont(str(path))

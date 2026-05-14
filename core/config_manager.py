@@ -3,30 +3,23 @@ import json
 import os
 from pathlib import Path
 
+from core.paths import CONFIG_PATH
+
 DEFAULT_CONFIG = {
     "pets": [
         {
             "id": "pet_1",
-            "character": "orange_cat",
+            "character": "chick",
             "duration_sec": 180,
-            "message": "休息一下！",
-            "alarms": [],
-            "position": {"x": -1, "y": -1},
-        },
-        {
-            "id": "pet_2",
-            "character": "snoopy",
-            "duration_sec": 300,
-            "message": "時間到！",
-            "alarms": [],
-            "position": {"x": -1, "y": -1},
-        },
-        {
-            "id": "pet_3",
-            "character": "shiba",
-            "duration_sec": 1500,
-            "message": "番茄鐘結束！",
-            "alarms": [],
+            "message": "時間到",
+            "alarms": [
+                {
+                    "time": "17:00",
+                    "message": "時間到",
+                    "repeat": "daily",
+                    "enabled": True,
+                }
+            ],
             "position": {"x": -1, "y": -1},
         },
     ],
@@ -42,7 +35,7 @@ _LEGACY_CHAR_MAP = {"cat": "orange_cat", "dog": "shiba"}
 class ConfigManager:
     def __init__(self, config_path=None):
         if config_path is None:
-            config_path = Path(__file__).parent.parent / "config" / "settings.json"
+            config_path = CONFIG_PATH
         self._path = Path(config_path)
         self._data = {}
         self.load()

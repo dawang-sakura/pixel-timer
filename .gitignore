@@ -5,7 +5,7 @@ __pycache__/
 venv/
 dist/
 build/
-*.spec
+!pixel_timer.spec
 *.egg-info/
 config/settings.json
 

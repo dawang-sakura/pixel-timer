@@ -44,7 +44,7 @@ pixel_timer/
 - Phase 5: Cron 鬧鐘功能（每隻桌寵定時自動提醒 + 設定 GUI）✅
 - Phase 6: GUI 像素風古早遊戲介面（RPG暗色主題 + 像素字體 + 打字機通知） ✅
 - Phase 6.4: UI 精修 — A 批次（氣泡+預覽重設計）+ Visual Round 1（B2/B3/B4 + C1）+ Visual Round 2（B1+B5 卡片視圖重設計）✅
-- Phase 7: PyInstaller 打包
+- Phase 7: PyInstaller 打包（onedir + `core/paths.py` 路徑解析 + `build.bat`）✅
 
 ## 開發指令
 ```bash
