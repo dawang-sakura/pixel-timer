@@ -252,22 +252,23 @@ class SettingsWindow(QDialog):
     # -- Pet Tab --
 
     def _build_pet_tab(self):
+        tab = self._build_pet_tab_ui()
+        self._load_pet_data()
+        return tab
+
+    def _build_pet_tab_ui(self):
+        """Build the static pet-tab widget tree and wire signals."""
         tab = QWidget()
         layout = QVBoxLayout(tab)
         layout.setSpacing(6)
         top_row = QHBoxLayout()
-        glob = self.config.get_global()
         self.chk_sound = QCheckBox("啟用音效")
-        self.chk_sound.setChecked(glob.get("sound_enabled", True))
         top_row.addWidget(self.chk_sound)
         top_row.addStretch()
         layout.addLayout(top_row)
         self.pet_list = CardListView(selectable=True)
         self.pet_list.setMinimumHeight(100)
         layout.addWidget(self.pet_list, 1)
-        for row_idx, pet in enumerate(self.config.get_pets()):
-            self._alarms_by_row[row_idx] = list(pet.get("alarms", []))
-            self._add_pet_card(pet)
         btn_layout = QHBoxLayout()
         btn_add = QPushButton("新增")
         btn_add.clicked.connect(self._on_add_pet)
@@ -304,6 +305,14 @@ class SettingsWindow(QDialog):
         layout.addLayout(alarm_btn_layout)
         self.pet_list.selection_changed.connect(self._on_pet_selected)
         return tab
+
+    def _load_pet_data(self):
+        """Populate pet list and alarm cache from config."""
+        glob = self.config.get_global()
+        self.chk_sound.setChecked(glob.get("sound_enabled", True))
+        for row_idx, pet in enumerate(self.config.get_pets()):
+            self._alarms_by_row[row_idx] = list(pet.get("alarms", []))
+            self._add_pet_card(pet)
 
     # -- Pet card helpers --
 
