@@ -25,6 +25,9 @@ pixel_timer/
   sprites/generate_sprites.py # Pillow 素材生成腳本
   ui/dwm_utils.py             # Win32 DWM 邊框修復（disable_dwm_frame）
   ui/pixel_theme.py           # 暗色 RPG 主題（色彩常數 + 字體載入 + QPalette + QSS）
+  ui/pet_card.py              # PetCard 卡片元件（sprite 縮圖 + 角色 + 秒數 + 訊息 + 刪除）
+  ui/alarm_card.py            # AlarmCard 卡片元件（hour/min + 訊息 + 重複 + 啟用 + 刪除）
+  ui/card_list_view.py        # CardListView 卡片列表容器（QScrollArea + QVBoxLayout）
   sprites/assets/             # 像素素材（8 角色 × 3 state × 2 frame = 48 PNG）
   assets/fonts/               # Ark Pixel 12px TTF（proportional + monospaced, zh_tw）
   config/settings.json        # 使用者設定（gitignore）
@@ -40,6 +43,7 @@ pixel_timer/
 - Phase 4.2: Snoopy BRIK 像素圖案直抄 + 42×40 尺寸對齊 ✅
 - Phase 5: Cron 鬧鐘功能（每隻桌寵定時自動提醒 + 設定 GUI）✅
 - Phase 6: GUI 像素風古早遊戲介面（RPG暗色主題 + 像素字體 + 打字機通知） ✅
+- Phase 6.4: UI 精修 — A 批次（氣泡+預覽重設計）+ Visual Round 1（B2/B3/B4 + C1）+ Visual Round 2（B1+B5 卡片視圖重設計）✅
 - Phase 7: PyInstaller 打包
 
 ## 開發指令
