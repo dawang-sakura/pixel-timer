@@ -35,7 +35,7 @@ class NotificationWindow(QWidget):
             min_width=120,
             tail_side="bottom",
             tail_offset_ratio=0.5,
-            show_shadow=True,
+            show_shadow=False,
             parent=self,
         )
         self._bubble.move(0, 0)

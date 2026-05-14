@@ -114,7 +114,7 @@ class SettingsWindow(QDialog):
         self._checker_cache = None
         self._checker_size = None
         self.setWindowTitle("Pixel Timer 設定")
-        self.setFixedSize(560, 520)
+        self.setFixedSize(560, 700)
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint)
         self._build_ui()
 
@@ -215,7 +215,7 @@ class SettingsWindow(QDialog):
         layout.addWidget(pet_label)
         # Pet card list -- takes equal share of vertical space
         self.pet_list = CardListView(selectable=True)
-        self.pet_list.setMinimumHeight(80)
+        self.pet_list.setMinimumHeight(192)  # 至少 3 張 PetCard (60+spacing 4 ×3 + margin)
         layout.addWidget(self.pet_list, 1)
         btn_layout = QHBoxLayout()
         btn_add = QPushButton("新增")
@@ -235,7 +235,7 @@ class SettingsWindow(QDialog):
         layout.addWidget(alarm_label)
         # Alarm card list -- takes equal share of vertical space
         self.alarm_list = CardListView(selectable=False)
-        self.alarm_list.setMinimumHeight(80)
+        self.alarm_list.setMinimumHeight(180)  # 至少 3 張 AlarmCard (56+spacing 4 ×3 + margin)
         layout.addWidget(self.alarm_list, 1)
         # Alarm add button -- directly below alarm_list
         alarm_btn_layout = QHBoxLayout()
