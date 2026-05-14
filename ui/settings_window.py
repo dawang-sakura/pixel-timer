@@ -5,12 +5,11 @@ from PySide6.QtWidgets import (
     QDialog, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QCheckBox, QMessageBox, QFrame, QStackedWidget,
 )
-from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPainter, QColor, QPen, QPixmap
 
 from core.constants import CHARACTER_OPTIONS, CHARACTER_DISPLAY_NAMES, DEFAULT_CHARACTER
 from ui.alarm_card import AlarmCard
-from ui.bubble_widget import BubbleWidget
 from ui.card_list_view import CardListView
 from ui.pet_card import PetCard
 from ui.title_bar import PixelTitleBar
@@ -100,69 +99,6 @@ class PixelTabBar(QWidget):
             self.update()
 
 
-# -- Sprite Preview --
-
-class SpritePreview(QWidget):
-    def __init__(self, sprite_loader, parent=None):
-        super().__init__(parent)
-        self._loader = sprite_loader
-        self._pixmaps = []
-        self._frame = 0
-        self._timer = QTimer(self)
-        self._timer.timeout.connect(self._next_frame)
-        self.setFixedSize(80, 80)
-
-    def set_character(self, character):
-        self._timer.stop()
-        self._pixmaps = []
-        for frame_idx in range(2):
-            pm = self._loader.load(character, "idle", frame_idx)
-            if pm and not pm.isNull():
-                self._pixmaps.append(pm)
-        self._frame = 0
-        if self._pixmaps:
-            self._timer.start(600)
-        self.update()
-
-    def clear(self):
-        self._timer.stop()
-        self._pixmaps = []
-        self.update()
-
-    def stop(self):
-        self._timer.stop()
-
-    def closeEvent(self, event):
-        self._timer.stop()
-        super().closeEvent(event)
-
-    def _next_frame(self):
-        if self._pixmaps:
-            self._frame = (self._frame + 1) % len(self._pixmaps)
-            self.update()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        try:
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-            painter.setPen(QPen(QColor(BORDER_LO), 2))
-            painter.setBrush(QColor(BG_MID))
-            painter.drawRect(1, 1, self.width() - 2, self.height() - 2)
-            if not self._pixmaps:
-                painter.setPen(QColor(TEXT_DIM))
-                painter.setFont(pixel_font(16))
-                painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "預覽")
-                return
-            pm = self._pixmaps[self._frame]
-            scaled = pm.scaled(64, 64,
-                               Qt.AspectRatioMode.KeepAspectRatio,
-                               Qt.TransformationMode.FastTransformation)
-            x = (self.width() - scaled.width()) // 2
-            y = (self.height() - scaled.height()) // 2
-            painter.drawPixmap(x, y, scaled)
-        finally:
-            painter.end()
-
 
 # -- Settings Window --
 
@@ -173,7 +109,6 @@ class SettingsWindow(QDialog):
         super().__init__(parent)
         self.config = config_manager
         self._sprite_loader = sprite_loader
-        self._preview = None
         self._displayed_alarm_row = None
         self._alarms_by_row = {}
         self._checker_cache = None
@@ -254,8 +189,6 @@ class SettingsWindow(QDialog):
         disable_dwm_frame(int(self.winId()))
 
     def closeEvent(self, event):
-        if self._preview:
-            self._preview.stop()
         super().closeEvent(event)
 
     # -- Pet Tab --
@@ -275,8 +208,14 @@ class SettingsWindow(QDialog):
         top_row.addWidget(self.chk_sound)
         top_row.addStretch()
         layout.addLayout(top_row)
+        # Pet section label
+        pet_label = QLabel("桌寵")
+        pet_label.setFont(pixel_font(14, bold=True))
+        pet_label.setStyleSheet(f"color: {TEXT_DIM};")
+        layout.addWidget(pet_label)
+        # Pet card list -- takes equal share of vertical space
         self.pet_list = CardListView(selectable=True)
-        self.pet_list.setMinimumHeight(100)
+        self.pet_list.setMinimumHeight(80)
         layout.addWidget(self.pet_list, 1)
         btn_layout = QHBoxLayout()
         btn_add = QPushButton("新增")
@@ -289,23 +228,16 @@ class SettingsWindow(QDialog):
         separator.setStyleSheet(f"color: {BORDER_LO};")
         separator.setFixedHeight(2)
         layout.addWidget(separator)
-        header_row = QHBoxLayout()
-        if self._sprite_loader:
-            self._preview = SpritePreview(self._sprite_loader)
-            header_row.addWidget(self._preview)
-        self._bubble_preview = BubbleWidget(
-            message="", character=DEFAULT_CHARACTER,
-            font_size=14, padding=10,
-            max_width=200, min_width=140,
-            tail_side="bottom", tail_offset_ratio=0.25,
-            show_shadow=False,
-        )
-        self._bubble_preview.setMinimumHeight(70)
-        header_row.addWidget(self._bubble_preview)
-        layout.addLayout(header_row)
+        # Alarm section label
+        alarm_label = QLabel("鬧鐘")
+        alarm_label.setFont(pixel_font(14, bold=True))
+        alarm_label.setStyleSheet(f"color: {TEXT_DIM};")
+        layout.addWidget(alarm_label)
+        # Alarm card list -- takes equal share of vertical space
         self.alarm_list = CardListView(selectable=False)
         self.alarm_list.setMinimumHeight(80)
         layout.addWidget(self.alarm_list, 1)
+        # Alarm add button -- directly below alarm_list
         alarm_btn_layout = QHBoxLayout()
         btn_add_alarm = QPushButton("新增鬧鐘")
         btn_add_alarm.clicked.connect(self._on_add_alarm)
@@ -341,16 +273,8 @@ class SettingsWindow(QDialog):
         return card
 
     def _on_pet_card_changed(self, card):
-        idx = self.pet_list.selected_index
-        if idx >= 0 and self.pet_list.card_at(idx) is card:
-            self._refresh_bubble_preview(card)
-
-    def _refresh_bubble_preview(self, card):
-        char_id = card.character_id
-        if self._preview and char_id in CHARACTER_OPTIONS:
-            self._preview.set_character(char_id)
-        self._bubble_preview.set_character(char_id)
-        self._bubble_preview.set_message(card.message)
+        # Kept for future use; no preview to refresh
+        pass
 
     def _on_delete_pet_card(self, card):
         self._sync_alarm_cards_to_data()
@@ -369,10 +293,6 @@ class SettingsWindow(QDialog):
                 sorted(self._alarms_by_row.items())
             )
         }
-        if self._preview:
-            self._preview.clear()
-        self._bubble_preview.set_message("")
-        self._bubble_preview.set_character(DEFAULT_CHARACTER)
 
     # -- Pet selection --
 
@@ -382,15 +302,8 @@ class SettingsWindow(QDialog):
         self._displayed_alarm_row = new_idx if new_idx >= 0 else None
         self.alarm_list.clear()
         if new_idx < 0:
-            if self._preview:
-                self._preview.clear()
-            self._bubble_preview.set_message("")
-            self._bubble_preview.set_character(DEFAULT_CHARACTER)
             return
         self._load_alarm_cards_for_row(new_idx)
-        card = self.pet_list.card_at(new_idx)
-        if card is not None:
-            self._refresh_bubble_preview(card)
 
     # -- Alarm card helpers --
 
