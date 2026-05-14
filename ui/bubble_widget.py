@@ -30,10 +30,10 @@ _DEFAULT_ACCENT = "#C8A96E"
 
 # -- Layout constants --
 
-OUTER_BORDER_W = 1          # V1: 2 -> 1 (lighter outer ring)
+OUTER_BORDER_W = 0          # Bug A: removed dark outer ring entirely
 MID_BORDER_W   = 3
 INNER_BORDER_W = 1
-FRAME_TOTAL    = OUTER_BORDER_W + MID_BORDER_W + INNER_BORDER_W  # = 5
+FRAME_TOTAL    = OUTER_BORDER_W + MID_BORDER_W + INNER_BORDER_W  # = 4
 
 SHADOW_OFFSET  = 4
 SHADOW_COLOR   = QColor("#2A1A00")
@@ -180,13 +180,11 @@ class BubbleWidget(QWidget):
                     painter.fillRect(SHADOW_OFFSET, SHADOW_OFFSET, body_w, body_h + tail_h, SHADOW_COLOR)
                 else:
                     painter.fillRect(SHADOW_OFFSET, SHADOW_OFFSET, body_w, body_h, SHADOW_COLOR)
-            # V1: outer border uses _accent_dark instead of TEXT
-            painter.fillRect(bx, by, body_w, body_h, self._accent_dark)
-            painter.fillRect(bx + OUTER_BORDER_W, by + OUTER_BORDER_W, body_w - 2 * OUTER_BORDER_W, body_h - 2 * OUTER_BORDER_W, self._accent)
+            # Bug A: _accent (orange) is now the outermost layer; dark outer ring removed
+            painter.fillRect(bx, by, body_w, body_h, self._accent)
             inset = OUTER_BORDER_W + MID_BORDER_W
             painter.fillRect(bx + inset, by + inset, body_w - 2 * inset, body_h - 2 * inset, QColor(BG_MID))
-            for cx_, cy_ in [(bx, by), (bx + body_w - CORNER_BITE, by), (bx, by + body_h - CORNER_BITE), (bx + body_w - CORNER_BITE, by + body_h - CORNER_BITE)]:
-                painter.fillRect(cx_, cy_, CORNER_BITE, CORNER_BITE, SHADOW_COLOR)
+            # Bug A: corner bites removed (they punched dark pixels into the accent border; no longer needed without outer ring)
             # V2: corner studs (RPG window rivet aesthetic) -- after cream fill, before highlight
             if body_w >= 60:
                 for sx, sy in [
