@@ -13,7 +13,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPainter, QColor, QPen
 
 from ui.pixel_theme import (
-    pixel_font, BG_MID, BORDER_LO, BORDER_HI,
+    pixel_font, BG_MID, BORDER_LO,
 )
 
 _REPEAT_OPTIONS = [("once", "單次"), ("daily", "每天"), ("weekdays", "平日")]
