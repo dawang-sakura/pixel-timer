@@ -3,7 +3,14 @@ ui/card_list_view.py -- Generic scrollable card list with optional single-select
 
 Manages a vertical list of QWidget cards inside a QScrollArea.
 Selection is managed by the container (not by individual cards).
+
+Note: external callers must not connect to ``card.clicked`` directly; CardListView
+manages that signal internally via _wire_card / _rewire_all.
 """
+
+from __future__ import annotations
+
+from typing import Iterator
 
 from PySide6.QtWidgets import (
     QScrollArea, QWidget, QVBoxLayout,
@@ -52,7 +59,7 @@ class CardListView(QScrollArea):
         self._cards.append(card)
         # Insert before the trailing stretch
         self._layout.insertWidget(idx, card)
-        self._wire_card(card, idx)
+        self._wire_card(card)
         return idx
 
     def insert_card(self, index: int, card: QWidget):
@@ -71,6 +78,8 @@ class CardListView(QScrollArea):
             return
         self.card_removed.emit(index)
         card = self._cards[index]
+        # Disconnect the slot we own before destroying the widget
+        self._unwire_card(card)
         self._layout.removeWidget(card)
         card.setParent(None)
         card.deleteLater()
@@ -103,6 +112,7 @@ class CardListView(QScrollArea):
     def clear(self):
         """Remove all cards."""
         for card in list(self._cards):
+            self._unwire_card(card)
             self._layout.removeWidget(card)
             card.setParent(None)
             card.deleteLater()
@@ -116,6 +126,17 @@ class CardListView(QScrollArea):
         if 0 <= index < len(self._cards):
             return self._cards[index]
         return None
+
+    def index_of(self, card: QWidget) -> int:
+        """Return the index of ``card``, or -1 if not found."""
+        try:
+            return self._cards.index(card)
+        except ValueError:
+            return -1
+
+    def iter_cards(self) -> Iterator[QWidget]:
+        """Iterate over cards in order."""
+        return iter(self._cards)
 
     @property
     def selected_index(self) -> int:
@@ -153,10 +174,23 @@ class CardListView(QScrollArea):
 
     # ── Internal ─────────────────────────────────────────────────────────
 
-    def _wire_card(self, card: QWidget, idx: int):
-        """Connect card's ``clicked`` signal if selectable."""
+    def _wire_card(self, card: QWidget):
+        """Connect card's ``clicked`` signal to our handler and store the slot ref."""
         if self._selectable and hasattr(card, "clicked"):
-            card.clicked.connect(lambda c=card: self._on_card_clicked(c))
+            slot = lambda c=card: self._on_card_clicked(c)
+            card._listview_slot = slot      # keep ref so we can disconnect precisely
+            card.clicked.connect(slot)
+
+    def _unwire_card(self, card: QWidget):
+        """Disconnect only the slot we connected in _wire_card, leaving others intact."""
+        if self._selectable and hasattr(card, "clicked"):
+            slot = getattr(card, "_listview_slot", None)
+            if slot is not None:
+                try:
+                    card.clicked.disconnect(slot)
+                except RuntimeError:
+                    pass
+                card._listview_slot = None
 
     def _rewire_all(self):
         """Rewire all cards (called after index shifts from insert/remove)."""
@@ -164,11 +198,8 @@ class CardListView(QScrollArea):
             return
         for card in self._cards:
             if hasattr(card, "clicked"):
-                try:
-                    card.clicked.disconnect()
-                except RuntimeError:
-                    pass
-                card.clicked.connect(lambda c=card: self._on_card_clicked(c))
+                self._unwire_card(card)
+                self._wire_card(card)
 
     def _on_card_clicked(self, card: QWidget):
         """Handle card click — find its index and update selection."""

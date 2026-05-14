@@ -336,18 +336,21 @@ class SettingsWindow(QDialog):
 
     def _on_delete_pet_card(self, card):
         self._sync_alarm_cards_to_data()
-        try:
-            idx = self.pet_list._cards.index(card)
-        except ValueError:
+        idx = self.pet_list.index_of(card)
+        if idx < 0:
             return
+        # code-I1: neutralise sync path BEFORE remove_card emits selection_changed(-1)
         self._alarms_by_row.pop(idx, None)
-        self.pet_list.remove_card(idx)
-        old_data = dict(self._alarms_by_row)
-        self._alarms_by_row = {}
-        for new_i, old_i in enumerate(sorted(old_data.keys())):
-            self._alarms_by_row[new_i] = old_data[old_i]
-        self.alarm_list.clear()
         self._displayed_alarm_row = None
+        self.alarm_list.clear()
+        self.pet_list.remove_card(idx)
+        # py-I3: dict comprehension reindex (keys may be non-contiguous after pop)
+        self._alarms_by_row = {
+            new_i: alarms
+            for new_i, (_, alarms) in enumerate(
+                sorted(self._alarms_by_row.items())
+            )
+        }
         if self._preview:
             self._preview.clear()
         self._bubble_preview.set_message("")
@@ -392,9 +395,8 @@ class SettingsWindow(QDialog):
         return card
 
     def _on_delete_alarm_card(self, card):
-        try:
-            idx = self.alarm_list._cards.index(card)
-        except ValueError:
+        idx = self.alarm_list.index_of(card)
+        if idx < 0:
             return
         self.alarm_list.remove_card(idx)
         self._sync_alarm_cards_to_data()
@@ -402,7 +404,7 @@ class SettingsWindow(QDialog):
     def _sync_alarm_cards_to_data(self):
         if self._displayed_alarm_row is None:
             return
-        alarms = [card.get_data() for card in self.alarm_list._cards]
+        alarms = [card.get_data() for card in self.alarm_list.iter_cards()]
         self._alarms_by_row[self._displayed_alarm_row] = alarms
 
     # -- Top-level pet/alarm add --
@@ -457,7 +459,7 @@ class SettingsWindow(QDialog):
     def _on_save(self):
         self._sync_alarm_cards_to_data()
         pets = []
-        for row, card in enumerate(self.pet_list._cards):
+        for row, card in enumerate(self.pet_list.iter_cards()):
             data = card.get_data()
             char = data["character"]
             dur = data["duration_sec"]
