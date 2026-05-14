@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QLabel, QComboBox, QSpinBox, QLineEdit, QPushButton,
     QSizePolicy,
 )
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QEvent
 from PySide6.QtGui import QPainter, QColor, QPen
 
 from core.constants import CHARACTER_OPTIONS, CHARACTER_DISPLAY_NAMES
@@ -112,6 +112,14 @@ class PetCard(QWidget):
         self._message_edit.textChanged.connect(lambda _: self.changed.emit())
         self._delete_btn.clicked.connect(self.delete_requested.emit)
 
+        # ── Whole-card click (Bug D fix) ──────────────────────────────────
+        # Sprite label: transparent to mouse so clicks fall through to card
+        self._sprite_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        # Input widgets: install event filter so first press also emits clicked
+        for child in (self._char_combo, self._duration_spin,
+                      self._message_edit, self._delete_btn):
+            child.installEventFilter(self)
+
     # ── Public API ────────────────────────────────────────────────────────
 
     def get_data(self) -> dict:
@@ -162,6 +170,13 @@ class PetCard(QWidget):
             self._sprite_label.setText("?")
 
     # ── Events ────────────────────────────────────────────────────────────
+
+    def eventFilter(self, watched, event):
+        """Emit clicked when any child widget is pressed, without blocking the child."""
+        if event.type() == QEvent.Type.MouseButtonPress:
+            if event.button() == Qt.MouseButton.LeftButton:
+                self.clicked.emit()
+        return super().eventFilter(watched, event)
 
     def mousePressEvent(self, event):
         """Emit clicked only when pressing the card background (not a child widget).
