@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QPainter, QColor, QPen, QPixmap
 
-from core.constants import CHARACTER_OPTIONS, CHARACTER_DISPLAY_NAMES
+from core.constants import CHARACTER_OPTIONS, CHARACTER_DISPLAY_NAMES, DEFAULT_CHARACTER
 from ui.alarm_card import AlarmCard
 from ui.bubble_widget import BubbleWidget
 from ui.card_list_view import CardListView
@@ -46,32 +46,35 @@ class PixelTabBar(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        painter.fillRect(self.rect(), QColor(BG_LIGHT))
-        painter.setPen(QPen(QColor(BORDER_HI), 2))
-        painter.drawLine(0, self.height() - 1, self.width(), self.height() - 1)
-        painter.setFont(self._font)
-        fm = painter.fontMetrics()
-        self._tab_rects = []
-        x = 16
-        cursor_text = "▶ "
-        cursor_w = fm.horizontalAdvance(cursor_text)
-        for i, label in enumerate(self._labels):
-            text_w = fm.horizontalAdvance(label)
-            total_w = cursor_w + text_w
-            if i == self._current:
-                painter.setPen(QColor(CURSOR_CLR))
-                painter.drawText(x, 0, cursor_w, self.height(),
-                                 Qt.AlignmentFlag.AlignVCenter, cursor_text)
-                painter.setPen(QColor(TEXT))
-                painter.drawText(x + cursor_w, 0, text_w, self.height(),
-                                 Qt.AlignmentFlag.AlignVCenter, label)
-            else:
-                painter.setPen(QColor(TEXT))
-                painter.drawText(x + cursor_w, 0, text_w, self.height(),
-                                 Qt.AlignmentFlag.AlignVCenter, label)
-            self._tab_rects.append((x, total_w))
-            x += total_w + 32
+        try:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+            painter.fillRect(self.rect(), QColor(BG_LIGHT))
+            painter.setPen(QPen(QColor(BORDER_HI), 2))
+            painter.drawLine(0, self.height() - 1, self.width(), self.height() - 1)
+            painter.setFont(self._font)
+            fm = painter.fontMetrics()
+            self._tab_rects = []
+            x = 16
+            cursor_text = "▶ "
+            cursor_w = fm.horizontalAdvance(cursor_text)
+            for i, label in enumerate(self._labels):
+                text_w = fm.horizontalAdvance(label)
+                total_w = cursor_w + text_w
+                if i == self._current:
+                    painter.setPen(QColor(CURSOR_CLR))
+                    painter.drawText(x, 0, cursor_w, self.height(),
+                                     Qt.AlignmentFlag.AlignVCenter, cursor_text)
+                    painter.setPen(QColor(TEXT))
+                    painter.drawText(x + cursor_w, 0, text_w, self.height(),
+                                     Qt.AlignmentFlag.AlignVCenter, label)
+                else:
+                    painter.setPen(QColor(TEXT))
+                    painter.drawText(x + cursor_w, 0, text_w, self.height(),
+                                     Qt.AlignmentFlag.AlignVCenter, label)
+                self._tab_rects.append((x, total_w))
+                x += total_w + 32
+        finally:
+            painter.end()
 
     def mousePressEvent(self, event):
         click_x = event.pos().x()
@@ -140,22 +143,25 @@ class SpritePreview(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        painter.setPen(QPen(QColor(BORDER_LO), 2))
-        painter.setBrush(QColor(BG_MID))
-        painter.drawRect(1, 1, self.width() - 2, self.height() - 2)
-        if not self._pixmaps:
-            painter.setPen(QColor(TEXT_DIM))
-            painter.setFont(pixel_font(16))
-            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "預覽")
-            return
-        pm = self._pixmaps[self._frame]
-        scaled = pm.scaled(64, 64,
-                           Qt.AspectRatioMode.KeepAspectRatio,
-                           Qt.TransformationMode.FastTransformation)
-        x = (self.width() - scaled.width()) // 2
-        y = (self.height() - scaled.height()) // 2
-        painter.drawPixmap(x, y, scaled)
+        try:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+            painter.setPen(QPen(QColor(BORDER_LO), 2))
+            painter.setBrush(QColor(BG_MID))
+            painter.drawRect(1, 1, self.width() - 2, self.height() - 2)
+            if not self._pixmaps:
+                painter.setPen(QColor(TEXT_DIM))
+                painter.setFont(pixel_font(16))
+                painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "預覽")
+                return
+            pm = self._pixmaps[self._frame]
+            scaled = pm.scaled(64, 64,
+                               Qt.AspectRatioMode.KeepAspectRatio,
+                               Qt.TransformationMode.FastTransformation)
+            x = (self.width() - scaled.width()) // 2
+            y = (self.height() - scaled.height()) // 2
+            painter.drawPixmap(x, y, scaled)
+        finally:
+            painter.end()
 
 
 # -- Settings Window --
@@ -208,37 +214,40 @@ class SettingsWindow(QDialog):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        w, h = self.width(), self.height()
-        if self._checker_cache is None or self._checker_size != (w, h):
-            self._checker_size = (w, h)
-            pm = QPixmap(w, h)
-            c1 = QColor(BG_DEEP)
-            c2 = QColor("#E8961E")
-            tile_p = QPainter(pm)
-            tile_p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-            for ty in range(0, h, 8):
-                for tx in range(0, w, 8):
-                    tile_p.fillRect(tx, ty, 8, 8,
-                                    c1 if (tx // 8 + ty // 8) % 2 == 0 else c2)
-            tile_p.end()
-            self._checker_cache = pm
-        painter.drawPixmap(0, 0, self._checker_cache)
-        inset = 12
-        tb_h = self._title_bar.height()
-        inset_top = inset + tb_h
-        fw = w - inset * 2
-        fh = h - inset_top - inset
-        painter.fillRect(inset + 3, inset_top + 3, fw, fh, QColor("#2A1A00"))
-        painter.setPen(QPen(QColor(BORDER_HI), 4))
-        painter.setBrush(QColor(BG_MID))
-        painter.drawRect(inset, inset_top, fw, fh)
-        dot_color = QColor(BORDER_HI)
-        for dx, dy in [(inset + 8, inset_top + 8), (inset + fw - 12, inset_top + 8),
-                       (inset + 8, inset_top + fh - 12),
-                       (inset + fw - 12, inset_top + fh - 12)]:
-            painter.fillRect(dx, dy, 4, 4, dot_color)
-            painter.fillRect(dx + 6, dy, 4, 4, dot_color)
+        try:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+            w, h = self.width(), self.height()
+            if self._checker_cache is None or self._checker_size != (w, h):
+                self._checker_size = (w, h)
+                pm = QPixmap(w, h)
+                c1 = QColor(BG_DEEP)
+                c2 = QColor("#E8961E")
+                tile_p = QPainter(pm)
+                tile_p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+                for ty in range(0, h, 8):
+                    for tx in range(0, w, 8):
+                        tile_p.fillRect(tx, ty, 8, 8,
+                                        c1 if (tx // 8 + ty // 8) % 2 == 0 else c2)
+                tile_p.end()
+                self._checker_cache = pm
+            painter.drawPixmap(0, 0, self._checker_cache)
+            inset = 12
+            tb_h = self._title_bar.height()
+            inset_top = inset + tb_h
+            fw = w - inset * 2
+            fh = h - inset_top - inset
+            painter.fillRect(inset + 3, inset_top + 3, fw, fh, QColor("#2A1A00"))
+            painter.setPen(QPen(QColor(BORDER_HI), 4))
+            painter.setBrush(QColor(BG_MID))
+            painter.drawRect(inset, inset_top, fw, fh)
+            dot_color = QColor(BORDER_HI)
+            for dx, dy in [(inset + 8, inset_top + 8), (inset + fw - 12, inset_top + 8),
+                           (inset + 8, inset_top + fh - 12),
+                           (inset + fw - 12, inset_top + fh - 12)]:
+                painter.fillRect(dx, dy, 4, 4, dot_color)
+                painter.fillRect(dx + 6, dy, 4, 4, dot_color)
+        finally:
+            painter.end()
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -285,7 +294,7 @@ class SettingsWindow(QDialog):
             self._preview = SpritePreview(self._sprite_loader)
             header_row.addWidget(self._preview)
         self._bubble_preview = BubbleWidget(
-            message="", character="orange_cat",
+            message="", character=DEFAULT_CHARACTER,
             font_size=14, padding=10,
             max_width=200, min_width=140,
             tail_side="bottom", tail_offset_ratio=0.25,
@@ -320,7 +329,7 @@ class SettingsWindow(QDialog):
         if pet_data is None:
             pet_data = {
                 "id": f"pet_{uuid.uuid4().hex[:8]}",
-                "character": "orange_cat",
+                "character": DEFAULT_CHARACTER,
                 "duration_sec": 60,
                 "message": "時間到！",
                 "position": {"x": -1, "y": -1},
@@ -363,7 +372,7 @@ class SettingsWindow(QDialog):
         if self._preview:
             self._preview.clear()
         self._bubble_preview.set_message("")
-        self._bubble_preview.set_character("orange_cat")
+        self._bubble_preview.set_character(DEFAULT_CHARACTER)
 
     # -- Pet selection --
 
@@ -376,7 +385,7 @@ class SettingsWindow(QDialog):
             if self._preview:
                 self._preview.clear()
             self._bubble_preview.set_message("")
-            self._bubble_preview.set_character("orange_cat")
+            self._bubble_preview.set_character(DEFAULT_CHARACTER)
             return
         self._load_alarm_cards_for_row(new_idx)
         card = self.pet_list.card_at(new_idx)
@@ -485,7 +494,7 @@ class SettingsWindow(QDialog):
             if not msg:
                 msg = "時間到！"
             if char not in CHARACTER_OPTIONS:
-                char = "orange_cat"
+                char = DEFAULT_CHARACTER
             row_alarms = self._alarms_by_row.get(row, [])
             for a_idx, alarm in enumerate(row_alarms):
                 t = alarm.get("time", "")

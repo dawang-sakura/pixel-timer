@@ -12,3 +12,5 @@ CHARACTER_DISPLAY_NAMES = {
     "chick": "小雞",
     "blue_eyes": "青眼白龍",
 }
+
+DEFAULT_CHARACTER = "orange_cat"  # fallback character id

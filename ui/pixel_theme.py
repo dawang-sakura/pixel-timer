@@ -104,22 +104,6 @@ QPushButton:disabled {{
     border-color: #D4C4A0;
 }}
 
-QTableWidget {{
-    background-color: {BG_MID};
-    alternate-background-color: {BG_LIGHT};
-    border: 2px solid {BORDER_LO};
-    gridline-color: {BORDER_LO};
-    color: {TEXT};
-    selection-background-color: {CURSOR_CLR};
-    selection-color: {BG_MID};
-}}
-QHeaderView::section {{
-    background-color: {BG_LIGHT};
-    color: {TEXT};
-    border: 1px solid {BORDER_LO};
-    padding: 4px;
-}}
-
 QComboBox {{
     background-color: {BG_MID};
     color: {TEXT};
@@ -202,8 +186,6 @@ QCheckBox::indicator:checked {{
     background-color: {CURSOR_CLR};
     border-color: {BORDER_HI};
 }}
-QTableWidget::item:focus {{ outline: 0; border: none; }}
-QTableView {{ outline: 0; }}
 QCheckBox {{ background: transparent; }}
 QCheckBox:focus {{ outline: 0; }}
 
