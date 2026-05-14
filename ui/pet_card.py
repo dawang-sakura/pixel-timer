@@ -183,23 +183,24 @@ class PetCard(QWidget):
         Selected: outer CURSOR_CLR (2px), fill BG_LIGHT + left 4px cursor bar
         """
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        try:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
 
-        w, h = self.width(), self.height()
+            w, h = self.width(), self.height()
 
-        # Background fill
-        fill = QColor(BG_LIGHT) if self._selected else QColor(BG_MID)
-        painter.fillRect(0, 0, w, h, fill)
+            # Background fill
+            fill = QColor(BG_LIGHT) if self._selected else QColor(BG_MID)
+            painter.fillRect(0, 0, w, h, fill)
 
-        # Outer border 2px
-        border_clr = QColor(CURSOR_CLR) if self._selected else QColor(BORDER_LO)
-        pen = QPen(border_clr, 2)
-        painter.setPen(pen)
-        painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawRect(1, 1, w - 2, h - 2)
+            # Outer border 2px
+            border_clr = QColor(CURSOR_CLR) if self._selected else QColor(BORDER_LO)
+            pen = QPen(border_clr, 2)
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRect(1, 1, w - 2, h - 2)
 
-        # Selected: left 4px gold cursor bar
-        if self._selected:
-            painter.fillRect(0, 0, 4, h, QColor(CURSOR_CLR))
-
-        painter.end()
+            # Selected: left 4px gold cursor bar
+            if self._selected:
+                painter.fillRect(0, 0, 4, h, QColor(CURSOR_CLR))
+        finally:
+            painter.end()

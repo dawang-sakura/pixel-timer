@@ -167,20 +167,18 @@ class AlarmCard(QWidget):
     # ── Events ────────────────────────────────────────────────────────────
 
     def paintEvent(self, event):
-        """Pixel-art border — no selected state (alarm list is not single-select).
-
-        Hover effect: border colour changes to BORDER_HI when mouse is over.
-        """
+        """Pixel-art border — no selected state (alarm list is not single-select)."""
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        try:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
 
-        w, h = self.width(), self.height()
+            w, h = self.width(), self.height()
 
-        painter.fillRect(0, 0, w, h, QColor(BG_MID))
+            painter.fillRect(0, 0, w, h, QColor(BG_MID))
 
-        pen = QPen(QColor(BORDER_LO), 2)
-        painter.setPen(pen)
-        painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawRect(1, 1, w - 2, h - 2)
-
-        painter.end()
+            pen = QPen(QColor(BORDER_LO), 2)
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRect(1, 1, w - 2, h - 2)
+        finally:
+            painter.end()
