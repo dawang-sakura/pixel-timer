@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import QWidget, QApplication
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtCore import Qt, QTimer, QPoint, Signal
 
 from ui.dwm_utils import disable_dwm_frame
@@ -51,7 +52,8 @@ class NotificationWindow(QWidget):
         tail_tip_y = hint.height() - SHADOW_OFFSET - 1
         x = position.x() - tail_tip_x
         y = position.y() - tail_tip_y - 4
-        screen = QApplication.primaryScreen()
+        # Bug B: use the screen the pet widget is actually on, not always primaryScreen
+        screen = QGuiApplication.screenAt(position) or QApplication.primaryScreen()
         if screen:
             geom = screen.availableGeometry()
             x = max(geom.x(), min(x, geom.right() - hint.width()))
