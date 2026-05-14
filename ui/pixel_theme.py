@@ -271,4 +271,41 @@ QLabel {{
 QStackedWidget > QWidget {{
     background-color: {BG_MID};
 }}
+
+/* PetCard / AlarmCard -- paintEvent draws border, QSS controls child widgets */
+
+QPushButton#DeleteButton {{
+    background-color: transparent;
+    color: #8D6E63;
+    border: 1px solid transparent;
+    padding: 0;
+    min-width: 24px;
+    min-height: 24px;
+    font-weight: bold;
+}}
+QPushButton#DeleteButton:hover {{
+    background-color: #E64A19;
+    color: #FFF8E7;
+    border-color: #D4820A;
+}}
+QPushButton#DeleteButton:pressed {{
+    background-color: #D4820A;
+    color: #FFF8E7;
+}}
+
+/* Card inner inputs -- 1px border (card paintEvent draws outer frame) */
+PetCard QComboBox, PetCard QLineEdit, PetCard QSpinBox,
+AlarmCard QComboBox, AlarmCard QLineEdit, AlarmCard QSpinBox {{
+    border: 1px solid #C8A96E;
+}}
+PetCard QComboBox:focus, PetCard QLineEdit:focus, PetCard QSpinBox:focus,
+AlarmCard QComboBox:focus, AlarmCard QLineEdit:focus, AlarmCard QSpinBox:focus {{
+    border-color: #D4820A;
+}}
+
+/* CardListView container */
+CardListView {{
+    background-color: #FFF8E7;
+    border: 2px solid #C8A96E;
+}}
 """
