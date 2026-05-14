@@ -213,18 +213,13 @@ class SettingsWindow(QDialog):
         pet_label.setFont(pixel_font(14, bold=True))
         pet_label.setStyleSheet(f"color: {TEXT_DIM};")
         layout.addWidget(pet_label)
-        # Pet card list -- takes equal share of vertical space
-        self.pet_list = CardListView(selectable=True)
-        self.pet_list.setMinimumHeight(192)  # 至少 3 張 PetCard (60+spacing 4 ×3 + margin)
-        self.pet_list.setMaximumHeight(192)  # 超過 3 張就 scroll，不擠壓下方按鈕
-        layout.addWidget(self.pet_list)
-        btn_layout = QHBoxLayout()
+        # Pet list with embedded footer button — list + button share the same frame border
+        self.pet_list = CardListView(selectable=True, card_height=60, max_visible=3)
         btn_add = QPushButton("新增")
-        btn_add.setMinimumHeight(28)
+        btn_add.setFixedHeight(28)
         btn_add.clicked.connect(self._on_add_pet)
-        btn_layout.addWidget(btn_add)
-        btn_layout.addStretch()
-        layout.addLayout(btn_layout)
+        self.pet_list.set_footer(btn_add)
+        layout.addWidget(self.pet_list)
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
         separator.setStyleSheet(f"color: {BORDER_LO};")
@@ -235,19 +230,13 @@ class SettingsWindow(QDialog):
         alarm_label.setFont(pixel_font(14, bold=True))
         alarm_label.setStyleSheet(f"color: {TEXT_DIM};")
         layout.addWidget(alarm_label)
-        # Alarm card list -- takes equal share of vertical space
-        self.alarm_list = CardListView(selectable=False)
-        self.alarm_list.setMinimumHeight(180)  # 至少 3 張 AlarmCard (56+spacing 4 ×3 + margin)
-        self.alarm_list.setMaximumHeight(180)
-        layout.addWidget(self.alarm_list)
-        # Alarm add button -- directly below alarm_list
-        alarm_btn_layout = QHBoxLayout()
+        # Alarm list with embedded footer button — list + button share the same frame border
+        self.alarm_list = CardListView(selectable=False, card_height=56, max_visible=3)
         btn_add_alarm = QPushButton("新增鬧鐘")
-        btn_add_alarm.setMinimumHeight(28)
+        btn_add_alarm.setFixedHeight(28)
         btn_add_alarm.clicked.connect(self._on_add_alarm)
-        alarm_btn_layout.addWidget(btn_add_alarm)
-        alarm_btn_layout.addStretch()
-        layout.addLayout(alarm_btn_layout)
+        self.alarm_list.set_footer(btn_add_alarm)
+        layout.addWidget(self.alarm_list)
         layout.addStretch(1)  # 多餘空間放最底，不要撐 list 或按鈕
         self.pet_list.selection_changed.connect(self._on_pet_selected)
         return tab

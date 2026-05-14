@@ -7,9 +7,9 @@ CHARACTER_DISPLAY_NAMES = {
     "white_cat": "白貓",
     "calico": "三花",
     "snoopy": "史奴比",
-    "shiba": "柴犬",
+    "shiba": "小狗",
     "goblin": "哥布林",
-    "chick": "小雞",
+    "chick": "小G",
     "blue_eyes": "青眼白龍",
 }
 

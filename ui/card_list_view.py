@@ -16,6 +16,44 @@ from PySide6.QtWidgets import (
     QScrollArea, QWidget, QVBoxLayout,
 )
 from PySide6.QtCore import Signal, Qt
+from PySide6.QtGui import QPainter, QColor
+
+from ui.pixel_theme import BG_DEEP
+
+
+class _CheckerWidget(QWidget):
+    """Inner container that paints the orange checker pattern as its background.
+
+    The checker matches SettingsWindow's outer-frame pattern (BG_DEEP +
+    #E8961E, 8px tile), so cards visually sit on the same backdrop instead of
+    the cream content fill.
+    """
+
+    _TILE = 8
+    _C1 = BG_DEEP        # #F5A623 warm orange
+    _C2 = "#E8961E"      # darker orange
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAutoFillBackground(False)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        try:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+            w, h = self.width(), self.height()
+            c1 = QColor(self._C1)
+            c2 = QColor(self._C2)
+            tile = self._TILE
+            for ty in range(0, h, tile):
+                for tx in range(0, w, tile):
+                    painter.fillRect(
+                        tx, ty, tile, tile,
+                        c1 if (tx // tile + ty // tile) % 2 == 0 else c2,
+                    )
+        finally:
+            painter.end()
 
 
 class CardListView(QScrollArea):
@@ -31,31 +69,55 @@ class CardListView(QScrollArea):
     selection_changed = Signal(int)   # new selected index; -1 = none
     card_removed = Signal(int)        # index of removed card (before removal)
 
-    def __init__(self, *, selectable: bool = True, parent=None):
+    def __init__(self, *, selectable: bool = True,
+                 card_height: int | None = None, max_visible: int = 3,
+                 parent=None):
         super().__init__(parent)
         self._selectable = selectable
         self._cards: list[QWidget] = []
         self._selected_idx: int = -1
+        self._card_h = card_height          # None = legacy fixed-height mode (caller sets size)
+        self._max_visible = max_visible
+        self._footer: QWidget | None = None
 
         # Scroll area settings
         self.setWidgetResizable(True)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-        # Transparent background so the settings window's checker paintEvent shows through
+        # Transparent QScrollArea frame + viewport — let inner _CheckerWidget paint the bg
         self.setStyleSheet("CardListView { background: transparent; border: 2px solid #C8A96E; }")
         self.viewport().setAutoFillBackground(False)
 
-        # Inner container
-        self._container = QWidget()
-        self._container.setAutoFillBackground(False)
-        self._container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+        # Inner container draws the checker pattern itself (does not rely on transparency chain)
+        self._container = _CheckerWidget()
         self._layout = QVBoxLayout(self._container)
         self._layout.setSpacing(4)
         self._layout.setContentsMargins(2, 2, 2, 2)
-        self._layout.addStretch(1)   # R1: stretch at tail keeps cards top-aligned
+        # NOTE: no trailing stretch in dynamic-height mode — list height is fit to cards.
+        # In legacy fixed-height mode caller decides; we keep top-aligned by default.
+        if self._card_h is None:
+            self._layout.addStretch(1)
 
         self.setWidget(self._container)
+
+        self._update_dynamic_height()
+
+    def set_footer(self, widget: QWidget):
+        """Embed a widget at the bottom of the list, inside the same border frame.
+
+        Used so an action button (e.g. 新增) sits flush against the cards with
+        no gap and no border conflict — they share the QScrollArea's outer
+        border and the checker background.
+        """
+        if self._footer is not None:
+            self._layout.removeWidget(self._footer)
+            self._footer.setParent(None)
+            self._footer.deleteLater()
+        self._footer = widget
+        # Append at the very end (after cards, after the stretch in legacy mode)
+        self._layout.addWidget(widget)
+        self._update_dynamic_height()
 
     # ── Public API ────────────────────────────────────────────────────────
 
@@ -66,6 +128,7 @@ class CardListView(QScrollArea):
         # Insert before the trailing stretch
         self._layout.insertWidget(idx, card)
         self._wire_card(card)
+        self._update_dynamic_height()
         return idx
 
     def insert_card(self, index: int, card: QWidget):
@@ -77,6 +140,7 @@ class CardListView(QScrollArea):
         # Adjust selected index
         if self._selected_idx >= index:
             self._selected_idx += 1
+        self._update_dynamic_height()
 
     def remove_card(self, index: int):
         """Remove card at ``index``. Emits ``card_removed`` before removal."""
@@ -100,6 +164,7 @@ class CardListView(QScrollArea):
 
         # Rewire remaining cards (index closures are stale)
         self._rewire_all()
+        self._update_dynamic_height()
 
     def remove_selected(self) -> int:
         """Remove the currently selected card. Returns its former index, -1 if none."""
@@ -124,6 +189,7 @@ class CardListView(QScrollArea):
             card.deleteLater()
         self._cards.clear()
         self._selected_idx = -1
+        self._update_dynamic_height()
 
     def card_count(self) -> int:
         return len(self._cards)
@@ -214,3 +280,23 @@ class CardListView(QScrollArea):
         except ValueError:
             return
         self.select_index(new_idx)
+
+    def _update_dynamic_height(self):
+        """Resize self to fit card count (clamped to max_visible) + footer.
+
+        In legacy fixed-height mode (card_height=None), this is a no-op so
+        callers can still setFixedHeight() externally.
+        """
+        if self._card_h is None:
+            return
+        # Always show at least 1 row's worth of space so empty lists don't collapse.
+        n = max(1, min(len(self._cards), self._max_visible))
+        spacing = self._layout.spacing()
+        m = self._layout.contentsMargins()
+        inner_h = n * self._card_h + max(0, n - 1) * spacing + m.top() + m.bottom()
+        # Footer (if any) sits inside the same border frame
+        if self._footer is not None:
+            inner_h += self._footer.sizeHint().height() + spacing
+        # 2px stylesheet border on each side
+        border = 2 * 2
+        self.setFixedHeight(inner_h + border)
