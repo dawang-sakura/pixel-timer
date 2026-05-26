@@ -102,7 +102,7 @@ def pixel_border(draw, rect, color, width=2):
 
 # ── 1. ALL CHARACTERS banner ────────────────────────────────────────────────
 def make_all_characters():
-    SCALE    = 4        # 48 → 192 px per sprite
+    SCALE    = 3        # 48 → 144 px per sprite (leaves room for labels)
     CELL_W   = 200
     CELL_H   = 240
     PADDING  = 16
@@ -147,20 +147,19 @@ def make_all_characters():
         pixel_border(d2, (card_x0, card_y0, card_x1, card_y1), accent, 2)
         pixel_border(d2, (card_x0 + 3, card_y0 + 3, card_x1 - 3, card_y1 - 3), BORDER_LO, 1)
 
-        # sprite (idle_0, 4x scale)
+        # sprite (idle_0), seated in the upper part of the card
         sprite = load_sprite(char, "idle", 0, scale=SCALE)
         sw, sh = sprite.size
         sx = cx - sw // 2
-        sy = card_y0 + 12
+        sy = card_y0 + 18
         canvas.alpha_composite(sprite, (sx, sy))
 
-        # name label (CJK font for full character coverage)
+        # labels anchored to the card bottom so they always sit inside the border
         name_w = draw.textlength(name, font=font_label)
-        draw.text((cx - name_w // 2, card_y0 + sh + 16), name, font=font_label, fill=TEXT_WARM)
+        draw.text((cx - name_w // 2, card_y1 - 48), name, font=font_label, fill=TEXT_WARM)
 
-        # english name (smaller, gold)
         eng_w = draw.textlength(char, font=font_sub)
-        draw.text((cx - eng_w // 2, card_y0 + sh + 38), char, font=font_sub, fill=(GOLD[0], GOLD[1], GOLD[2], 160))
+        draw.text((cx - eng_w // 2, card_y1 - 26), char, font=font_sub, fill=(GOLD[0], GOLD[1], GOLD[2], 160))
 
     # outer border
     pixel_border(draw, (2, 2, W - 3, H - 3), BORDER_HI, 2)
@@ -183,36 +182,42 @@ def make_desktop():
         draw.line([(0, y), (W, y)], fill=(40, 40, 70, 60))
 
     # taskbar
-    taskbar = Image.new("RGBA", (W, 36), TASKBAR)
+    TB = 36
+    taskbar = Image.new("RGBA", (W, TB), TASKBAR)
     tb_draw = ImageDraw.Draw(taskbar)
     tb_draw.line([(0, 0), (W, 0)], fill=BORDER_LO)
-    canvas.alpha_composite(taskbar, (0, H - 36))
+    canvas.alpha_composite(taskbar, (0, H - TB))
 
-    # system tray area
+    # system tray clock
     font_sm = load_font(12)
-    draw.text((W - 80, H - 26), "22:00", font=font_sm, fill=TEXT_WARM)
+    draw.text((W - 70, H - 26), "22:00", font=font_sm, fill=TEXT_WARM)
 
-    # pets placed on desktop
-    SCALE = 3
-    pets_placed = [
-        ("orange_cat", "idle",     0, 120, 340),
-        ("shiba",      "idle",     0, 320, 370),
-        ("chick",      "counting", 0, 560, 380),
-    ]
-
-    for char, state, frame, px, py in pets_placed:
-        sprite = load_sprite(char, state, frame, scale=SCALE)
-        canvas.alpha_composite(sprite, (px, py))
-
-    # notification bubble next to chick
-    bubble_pet = "chick"
-    bx, by = 560, 380
-    _draw_bubble(canvas, bx - 240, by - 80, 230, 70,
-                 "時間到！休息一下～", bubble_pet)
-
-    # small label
+    # top-left desktop label
     font_cjk_sm = load_cjk_font(13)
-    draw.text((20, 14), "Pixel Timer  ·  系統匣常駐中", font=font_cjk_sm, fill=BORDER_LO)
+    draw.text((20, 16), "Pixel Timer  ·  系統匣常駐中", font=font_cjk_sm, fill=BORDER_LO)
+
+    # pets standing on the taskbar (feet rest on taskbar top, never clipped)
+    SCALE  = 3
+    feet_y = H - TB
+    pets_placed = [
+        ("orange_cat", "idle",     0, 150),
+        ("shiba",      "idle",     0, 380),
+        ("chick",      "counting", 0, 600),
+    ]
+    chick_cx = chick_top = None
+    for char, state, frame, px in pets_placed:
+        sprite = load_sprite(char, state, frame, scale=SCALE)
+        sw, sh = sprite.size
+        py = feet_y - sh
+        canvas.alpha_composite(sprite, (px, py))
+        if char == "chick":
+            chick_cx, chick_top = px + sw // 2, py
+
+    # notification bubble above the chick — tail points down onto its head
+    bw, bh = 240, 64
+    bx = chick_cx - bw + 24      # _draw_bubble tail sits at bx+bw-20 ≈ chick_cx
+    by = chick_top - bh - 18
+    _draw_bubble(canvas, bx, by, bw, bh, "時間到！休息一下～", "chick")
 
     out_path = OUT / "desktop.png"
     canvas.save(out_path)
@@ -250,7 +255,7 @@ def _draw_bubble(canvas, bx, by, bw, bh, text, char):
 
 # ── 3. BUBBLE close-up ──────────────────────────────────────────────────────
 def make_bubble():
-    W, H = 500, 260
+    W, H = 520, 280
     canvas = Image.new("RGBA", (W, H), DARK_BLUE)
     draw   = ImageDraw.Draw(canvas)
 
@@ -260,34 +265,38 @@ def make_bubble():
     for y in range(0, H, 32):
         draw.line([(0, y), (W, y)], fill=(50, 50, 80, 80))
 
-    SCALE = 4
-    # pet (orange_cat finished)
+    # caption (top) — drawn first so nothing else sits in this band
+    font_cjk_sm = load_cjk_font(13)
+    draw.text((14, 12), "RPG 對話氣泡  ·  打字機逐字效果  ·  點擊關閉",
+              font=font_cjk_sm, fill=BORDER_LO)
+
+    SCALE = 3
+    # pet (orange_cat finished), feet near bottom
     sprite = load_sprite("orange_cat", "finished", 0, scale=SCALE)
     sw, sh = sprite.size
-    pet_x = 60
-    pet_y = H - sh - 30
+    pet_x = 70
+    pet_y = H - sh - 40
     canvas.alpha_composite(sprite, (pet_x, pet_y))
 
-    # star effect (finished state)
-    star_color = (255, 240, 60)
-    for sx, sy in [(pet_x + sw // 2 - 30, pet_y - 20),
-                   (pet_x + sw // 2 + 20, pet_y - 30),
-                   (pet_x + sw // 2 - 10, pet_y - 45)]:
-        draw.text((sx, sy), "★", font=load_font(12), fill=star_color)
+    # star effect — clustered above the pet's head, safely below the caption band
+    star_font = load_cjk_font(16)
+    head_cx = pet_x + sw // 2
+    for sx, sy in [(head_cx - 38, pet_y - 20),
+                   (head_cx + 22, pet_y - 28),
+                   (head_cx - 6,  pet_y - 38)]:
+        draw.text((sx, sy), "★", font=star_font, fill=(255, 230, 70))
 
-    # bubble
-    _draw_bubble(canvas, pet_x + sw + 10, pet_y - 20, 240, 80,
-                 "休息一下！(^▽^)/", "orange_cat")
+    # bubble — right of the pet, vertically centred on it
+    bw, bh = 250, 84
+    bx = pet_x + sw + 20
+    by = pet_y + (sh - bh) // 2
+    text = "休息一下！(^▽^)/"
+    _draw_bubble(canvas, bx, by, bw, bh, text, "orange_cat")
 
-    # typewriter cursor blink indicator
-    font = load_font(12)
-    draw.text((pet_x + sw + 10 + 12 + 130, pet_y - 20 + (80 - 16) // 2),
-              "▎", font=font, fill=GOLD)
-
-    # label
-    font_cjk_sm = load_cjk_font(13)
-    draw.text((12, 12), "RPG 對話氣泡  ·  打字機逐字效果  ·  點擊關閉",
-              font=font_cjk_sm, fill=BORDER_LO)
+    # typewriter cursor — measured, placed right after the text
+    font_txt = load_cjk_font(14)
+    tw = draw.textlength(text, font=font_txt)
+    draw.text((bx + 12 + tw + 3, by + (bh - 18) // 2), "▌", font=font_txt, fill=GOLD)
 
     # outer border
     pixel_border(draw, (2, 2, W - 3, H - 3), BORDER_HI, 2)
